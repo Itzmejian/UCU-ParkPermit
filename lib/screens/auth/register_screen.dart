@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
 import '../../core/signup_info.dart';
+import '../../models/profile_store.dart';
 import '../../core/validators.dart';
 import '../../widgets/app_buttons.dart';
 import '../../widgets/app_text_field.dart';
@@ -46,6 +47,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!valid || _role == null || !_accepted) return;
     setState(() => _loading = true);
     // TODO: Supabase sign up goes here (save the role with the account).
+    ProfileStore.instance.setAccount(
+      fullName: _nameCtrl.text.trim(),
+      email: _emailCtrl.text.trim(),
+      role: _role!,
+    );
     await Future<void>.delayed(const Duration(milliseconds: 700));
     if (!mounted) return;
     setState(() => _loading = false);

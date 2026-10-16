@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'core/app_routes.dart';
 import 'core/app_theme.dart';
+import 'models/notification_store.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  NotificationStore.instance.ensureStarted();
   runApp(const ParkPermitApp());
 }
 

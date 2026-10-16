@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
 import '../../core/signup_info.dart';
+import '../../models/profile_store.dart';
 import '../../core/validators.dart';
 import '../../widgets/app_buttons.dart';
 import '../../widgets/app_text_field.dart';
@@ -152,6 +153,19 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     // TODO: save all profile details to the Supabase profile.
+    ProfileStore.instance.setDetails(
+      idNumber: _idCtrl.text.trim(),
+      program: _programCtrl.text.trim(),
+      yearLevel: _yearCtrl.text.trim(),
+      employeeType: _empTypeCtrl.text.trim(),
+      department: _deptCtrl.text.trim(),
+      birthday: _birthday,
+      street: _streetCtrl.text.trim(),
+      barangay: _barangayCtrl.text.trim(),
+      city: _cityCtrl.text.trim(),
+      province: _provinceCtrl.text.trim(),
+      phone: _phoneCtrl.text.trim(),
+    );
     await Future<void>.delayed(const Duration(milliseconds: 700));
     if (!mounted) return;
     setState(() => _loading = false);

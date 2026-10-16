@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
+import '../../models/notification_store.dart';
 import '../../widgets/ucu_logo.dart';
 import '../home/home_tab.dart';
 import '../profile/profile_tab.dart';
@@ -56,15 +57,22 @@ class _MainShellState extends State<MainShell> {
           ],
         ),
         actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            icon: const Badge(
-              smallSize: 9,
-              backgroundColor: AppColors.error,
-              child: Icon(Icons.notifications_none_rounded),
-            ),
-            onPressed: () =>
-                Navigator.pushNamed(context, AppRoutes.notifications),
+          AnimatedBuilder(
+            animation: NotificationStore.instance,
+            builder: (context, child) {
+              final n = NotificationStore.instance.unreadCount;
+              return IconButton(
+                tooltip: 'Notifications',
+                icon: Badge(
+                  isLabelVisible: n > 0,
+                  label: Text(n > 9 ? '9+' : '$n'),
+                  backgroundColor: AppColors.error,
+                  child: const Icon(Icons.notifications_none_rounded),
+                ),
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRoutes.notifications),
+              );
+            },
           ),
           const SizedBox(width: 6),
         ],

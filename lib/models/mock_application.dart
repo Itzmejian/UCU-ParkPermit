@@ -10,7 +10,7 @@ class FlaggedDocument {
 }
 
 /// Sample data used until the app is connected to Supabase.
-/// If the user filled in the wizard, their own vehicle details replace the sample.
+/// If the user registered a vehicle, its details replace the sample.
 class MockApplication {
   const MockApplication({
     required this.referenceNo,
@@ -79,15 +79,18 @@ class MockApplication {
     );
   }
 
-  /// Sample data, with the user's own vehicle details when they have any.
+  /// Sample data, with the primary vehicle's own details when it has any.
   static MockApplication resolve(PermitStatus status) {
     final base = forStatus(status);
     final store = ApplicationStore.instance;
-    final sub = store.submitted;
-    final d = store.draft ?? sub?.draft;
+    final vehicles = store.vehicles;
+    final primary = vehicles.isEmpty ? null : vehicles.first;
+    final ApplicationDraft? d = status == PermitStatus.draft
+        ? (store.draft ?? primary?.draft)
+        : primary?.draft;
     if (d == null) return base;
     return base.copyWith(
-      referenceNo: sub?.referenceNo,
+      referenceNo: status == PermitStatus.draft ? null : primary?.referenceNo,
       vehicleName: d.makeModel.trim().isEmpty ? null : d.makeModel.trim(),
       plate: d.plate.trim().isEmpty ? null : d.plateDisplay,
       vehicleType: d.vehicleType?.label,

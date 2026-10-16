@@ -40,7 +40,7 @@ class ApplicationSubmittedScreen extends StatelessWidget {
           IconButton(
             tooltip: 'Close',
             icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.popUntil(context, (r) => r.settings.name == AppRoutes.home),
           ),
         ],
       ),
@@ -141,7 +141,7 @@ class ApplicationSubmittedScreen extends StatelessWidget {
               PrimaryButton(
                 label: 'Back to Home',
                 showArrow: true,
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.popUntil(context, (r) => r.settings.name == AppRoutes.home),
               ),
               const SizedBox(height: 6),
               TextButton.icon(

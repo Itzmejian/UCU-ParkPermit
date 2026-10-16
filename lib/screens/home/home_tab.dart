@@ -8,6 +8,7 @@ import '../../widgets/app_buttons.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/step_timeline.dart';
 import '../../models/application_store.dart';
+import '../../models/profile_store.dart';
 import 'home_cards.dart';
 
 class HomeTab extends StatefulWidget {
@@ -19,7 +20,25 @@ class HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<HomeTab> {
   // TODO: replace with the real status from Supabase.
-  PermitStatus _status = PermitStatus.none;
+  PermitStatus _status = ApplicationStore.instance.status;
+
+  @override
+  void initState() {
+    super.initState();
+    ApplicationStore.instance.addListener(_syncFromStore);
+  }
+
+  @override
+  void dispose() {
+    ApplicationStore.instance.removeListener(_syncFromStore);
+    super.dispose();
+  }
+
+  void _syncFromStore() {
+    if (!mounted) return;
+    final s = ApplicationStore.instance.status;
+    if (s != _status) setState(() => _status = s);
+  }
 
   Future<void> _go(String route) async {
     ApplicationStore.instance.status = _status;
@@ -30,6 +49,9 @@ class _HomeTabState extends State<HomeTab> {
     } else if (route == AppRoutes.permitDetails &&
         _status == PermitStatus.approved) {
       target = AppRoutes.applicationApproved;
+    }
+    if (route == AppRoutes.renewal && _status == PermitStatus.expired) {
+      target = AppRoutes.permitExpired;
     }
     await Navigator.pushNamed(context, target);
     if (!mounted) return;
@@ -62,12 +84,18 @@ class _HomeTabState extends State<HomeTab> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
-        const GreetingBanner(name: 'Juan', roleLabel: 'STUDENT APPLICANT'),
+        AnimatedBuilder(
+          animation: ProfileStore.instance,
+          builder: (context, child) => GreetingBanner(
+            name: ProfileStore.instance.firstName,
+            roleLabel: ProfileStore.instance.roleBadge,
+          ),
+        ),
         if (kShowDevTools) ...[
           const SizedBox(height: 12),
           _DevSwitcher(
             current: _status,
-            onChanged: (s) => setState(() => _status = s),
+            onChanged: (s) => ApplicationStore.instance.setStatus(s),
           ),
         ],
         const SizedBox(height: 14),
