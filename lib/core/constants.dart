@@ -10,8 +10,8 @@ const int kOtpResendSeconds = 60;
 /// TESTING ONLY (prototype mode): the code accepted while the app is not
 /// connected to Supabase.
 const String kDevOtp = '123456';
-const bool kShowDevOtpHint = true;
+const bool kShowDevOtpHint = false;
 
 /// TESTING ONLY: shows a status switcher on the Home tab so every state can
 /// be previewed. Set to false (or remove) when the backend is connected.
-const bool kShowDevTools = true;
+const bool kShowDevTools = false;
