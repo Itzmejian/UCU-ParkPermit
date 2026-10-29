@@ -1,6 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/app_colors.dart';
+import '../../core/app_limits.dart';
+import '../../core/doc_picker.dart';
+import '../../core/orcr_parser.dart';
 import '../../core/vehicle_validators.dart';
 import '../../models/application_draft.dart';
 import '../../widgets/app_text_field.dart';
@@ -41,6 +47,10 @@ class _StepVehicleDetailsState extends State<StepVehicleDetails> {
   late final TextEditingController _color;
   late final TextEditingController _year;
 
+  bool _scanning = false;
+  String? _scanMessage;
+  bool _scanOk = false;
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +79,212 @@ class _StepVehicleDetailsState extends State<StepVehicleDetails> {
     if (_formKey.currentState!.validate()) widget.onNext();
   }
 
+  /// Takes or picks a photo of the OR/CR, reads it on the phone and fills in
+  /// what it found. Nothing is sent to the internet for this.
+  Future<void> _scan(ImageSource source) async {
+    FocusScope.of(context).unfocus();
+    XFile? photo;
+    try {
+      photo = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 2000,
+        imageQuality: 85,
+      );
+    } catch (_) {
+      setState(() {
+        _scanOk = false;
+        _scanMessage = source == ImageSource.camera
+            ? 'Could not open the camera. Please try again.'
+            : 'Could not open your photos. Please try again.';
+      });
+      return;
+    }
+    if (photo == null) return;
+    setState(() {
+      _scanning = true;
+      _scanMessage = null;
+    });
+
+    var lines = <String>[];
+    final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
+    try {
+      final result =
+          await recognizer.processImage(InputImage.fromFilePath(photo.path));
+      lines = [
+        for (final block in result.blocks)
+          for (final line in block.lines) line.text,
+      ];
+    } catch (_) {
+      lines = <String>[];
+    } finally {
+      await recognizer.close();
+    }
+    final found = parseOrcr(lines);
+
+    // Use the same photo as the OR/CR document if none was added yet.
+    var attached = false;
+    if (widget.draft.orcr == null) {
+      try {
+        var bytes = await photo.readAsBytes();
+        if (bytes.length > kShrinkAboveBytes) {
+          final small = await compressImageBytes(bytes);
+          if (small != null && small.length < bytes.length) bytes = small;
+        }
+        if (bytes.length <= kMaxUploadBytes) {
+          widget.draft.orcr = PickedDoc(
+            name: 'orcr_scan.jpg',
+            sizeBytes: bytes.length,
+            bytes: bytes,
+          );
+          attached = true;
+        }
+      } catch (_) {}
+    }
+    if (!mounted) return;
+
+    final filled = <String>[];
+    setState(() {
+      if (found.plate != null) {
+        _plate.text = found.plate!;
+        filled.add('plate number');
+      }
+      if (found.makeModel != null) {
+        _make.text = found.makeModel!;
+        filled.add('make / model');
+      }
+      if (found.color != null) {
+        _color.text = found.color!;
+        filled.add('color');
+      }
+      if (found.year != null) {
+        _year.text = found.year!;
+        filled.add('model year');
+      }
+      _scanning = false;
+      _scanOk = filled.isNotEmpty;
+      var message = filled.isEmpty
+          ? 'We could not read the details. Try again in good light with the whole OR/CR in the photo, or type them in.'
+          : 'Filled in: ${filled.join(', ')}. Please check them before you continue.';
+      if (attached) {
+        message = '$message The photo was also added as your OR/CR in the next step.';
+      }
+      _scanMessage = message;
+    });
+  }
+
+  Widget _scanCard() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.inputFill,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.document_scanner_outlined, size: 24, color: AppColors.navy),
+              SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Scan your OR/CR',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.navy,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Take a photo of your Certificate of Registration and we will fill in the details for you. The photo is read on your phone.',
+                      style: TextStyle(fontSize: 12.5, height: 1.4, color: AppColors.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_scanning)
+            const Column(
+              children: [
+                LinearProgressIndicator(color: AppColors.navy),
+                SizedBox(height: 8),
+                Text(
+                  'Reading your OR/CR...',
+                  style: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _scan(ImageSource.camera),
+                    icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                    label: const Text('Take photo'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.navy,
+                      side: const BorderSide(color: AppColors.navy),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _scan(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library_outlined, size: 18),
+                    label: const Text('Choose photo'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.navy,
+                      side: const BorderSide(color: AppColors.navy),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          if (_scanMessage != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _scanOk ? AppColors.successLight : AppColors.goldLight,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _scanOk ? AppColors.success : AppColors.gold),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    _scanOk ? Icons.check_circle_outline : Icons.info_outline,
+                    size: 18,
+                    color: _scanOk ? AppColors.success : AppColors.goldDark,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _scanMessage!,
+                      style: const TextStyle(fontSize: 12.5, height: 1.4, color: AppColors.textDark),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final moto = widget.draft.isMotorcycle;
@@ -92,7 +308,11 @@ class _StepVehicleDetailsState extends State<StepVehicleDetails> {
               'Enter your vehicle information exactly as it appears on your OR/CR.',
               style: TextStyle(fontSize: 14, height: 1.4, color: AppColors.textMuted),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            if (!kIsWeb) ...[
+              _scanCard(),
+              const SizedBox(height: 18),
+            ],
             AppTextField(
               label: 'Plate Number',
               hint: 'e.g., ABC 1234',
