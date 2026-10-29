@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../core/app_colors.dart';
 import '../../core/date_format.dart';
 import '../../core/pangasinan_address.dart';
+import '../../core/ucu_departments.dart';
 import '../../core/ucu_programs.dart';
 import '../../core/validators.dart';
 import '../../models/network_store.dart';
@@ -39,6 +40,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController _year = TextEditingController();
   final TextEditingController _empType = TextEditingController();
   final TextEditingController _dept = TextEditingController();
+  final TextEditingController _deptOther = TextEditingController();
   final TextEditingController _street = TextEditingController();
   final TextEditingController _barangay = TextEditingController();
   final TextEditingController _city = TextEditingController();
@@ -46,6 +48,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _loading = false;
 
   bool get _programIsOther => _program.text == kOtherProgram;
+  bool get _deptIsOther => _dept.text == kOtherDepartment;
+  String get _deptValue => _deptIsOther ? _deptOther.text.trim() : _dept.text.trim();
 
   @override
   void initState() {
@@ -55,7 +59,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _phone.text = p.phone;
     _year.text = p.yearLevel;
     _empType.text = p.employeeType;
-    _dept.text = p.department;
+// A department typed before the dropdown existed is kept as "Other".
+    final dept = p.department.trim();
+    final deptOptions = departmentOptions(p.employeeType);
+    if (dept.isEmpty) {
+      _dept.text = '';
+    } else if (deptOptions.contains(dept)) {
+      _dept.text = dept;
+    } else {
+      _dept.text = kOtherDepartment;
+      _deptOther.text = dept;
+    }
     _street.text = p.street;
 
     // A course typed before the dropdown existed is kept as "Other".
@@ -79,7 +93,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void dispose() {
     for (final c in [
-      _name, _phone, _program, _other, _year, _empType, _dept,
+      _name, _phone, _program, _other, _year, _empType, _dept, _deptOther,
       _street, _barangay, _city, _province,
     ]) {
       c.dispose();
@@ -106,7 +120,33 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       options: _employeeTypes,
       selected: _empType.text,
     );
-    if (choice != null) setState(() => _empType.text = choice);
+    if (choice == null) return;
+    setState(() {
+      if (choice != _empType.text) {
+        _dept.clear();
+        _deptOther.clear();
+      }
+      _empType.text = choice;
+    });
+  }
+
+Future<void> _pickDepartment() async {
+    final type = _empType.text;
+    if (type.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choose your employee type first.')),
+      );
+      return;
+    }
+    final choice = await showSearchSheet(
+      context,
+      title: isFacultyType(type) ? 'College / Department' : 'Office',
+      options: departmentOptions(type),
+      subtitles: departmentSubtitles(type),
+      selected: _dept.text,
+      searchHint: 'Search',
+    );
+    if (choice != null) setState(() => _dept.text = choice);
   }
 
   Future<void> _pickProgram() async {
@@ -168,7 +208,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       program: program,
       yearLevel: _year.text.trim(),
       employeeType: _empType.text.trim(),
-      department: _dept.text.trim(),
+      department: _deptValue,
       street: _street.text.trim(),
       barangay: _barangay.text.trim(),
       city: _city.text.trim(),
@@ -188,7 +228,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       program: program,
       yearLevel: _year.text.trim(),
       employeeType: _empType.text.trim(),
-      department: _dept.text.trim(),
+      department: _deptValue,
       street: _street.text.trim(),
       barangay: _barangay.text.trim(),
       city: _city.text.trim(),
@@ -359,14 +399,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(height: 16),
                   AppTextField(
                     label: 'Department / Office',
-                    hint: 'e.g., College of Computer Studies',
+                    hint: _empType.text.isEmpty
+                        ? 'Choose your employee type first'
+                        : 'Select your department or office',
                     icon: Icons.apartment_outlined,
                     controller: _dept,
                     isRequired: true,
-                    textInputAction: TextInputAction.next,
-                    textCapitalization: TextCapitalization.words,
-                    validator: (v) => Validators.required(v, 'Department / Office'),
+                    readOnly: true,
+                    onTap: _pickDepartment,
+                    trailingIcon: Icons.keyboard_arrow_down_rounded,
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? 'Please choose your department or office'
+                        : null,
                   ),
+                  if (_deptIsOther) ...[
+                    const SizedBox(height: 16),
+                    AppTextField(
+                      label: 'Your Department / Office',
+                      hint: 'Type the name of your department or office',
+                      icon: Icons.edit_outlined,
+                      controller: _deptOther,
+                      isRequired: true,
+                      textInputAction: TextInputAction.next,
+                      textCapitalization: TextCapitalization.words,
+                      validator: (v) => Validators.required(v, 'Department / Office'),
+                    ),
+                  ],
                 ],
                 const SizedBox(height: 8),
                 _section('Home address'),

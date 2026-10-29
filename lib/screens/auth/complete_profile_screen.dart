@@ -5,6 +5,7 @@ import '../../core/app_routes.dart';
 import '../../core/pangasinan_address.dart';
 import '../../core/profile_validators.dart';
 import '../../core/signup_info.dart';
+import '../../core/ucu_departments.dart';
 import '../../core/ucu_programs.dart';
 import '../../core/validators.dart';
 import '../../models/network_store.dart';
@@ -52,6 +53,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   final _yearCtrl = TextEditingController();
   final _empTypeCtrl = TextEditingController();
   final _deptCtrl = TextEditingController();
+  final _deptOtherCtrl = TextEditingController();
   final _birthCtrl = TextEditingController();
   final _streetCtrl = TextEditingController();
   final _barangayCtrl = TextEditingController();
@@ -67,6 +69,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
   bool get _isStudent => _role == kRoleStudent;
   bool get _programIsOther => _programCtrl.text == kOtherProgram;
+  bool get _deptIsOther => _deptCtrl.text == kOtherDepartment;
 
   @override
   void didChangeDependencies() {
@@ -82,7 +85,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   @override
   void dispose() {
     for (final c in [
-      _idCtrl, _programCtrl, _otherCtrl, _yearCtrl, _empTypeCtrl, _deptCtrl,
+      _idCtrl, _programCtrl, _otherCtrl, _yearCtrl, _empTypeCtrl, _deptCtrl, _deptOtherCtrl,
       _birthCtrl, _streetCtrl, _barangayCtrl, _cityCtrl, _provinceCtrl, _phoneCtrl,
     ]) {
       c.dispose();
@@ -137,7 +140,33 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       options: _employeeTypes,
       selected: _empTypeCtrl.text,
     );
-    if (choice != null) setState(() => _empTypeCtrl.text = choice);
+    if (choice == null) return;
+    setState(() {
+      if (choice != _empTypeCtrl.text) {
+        _deptCtrl.clear();
+        _deptOtherCtrl.clear();
+      }
+      _empTypeCtrl.text = choice;
+    });
+  }
+
+Future<void> _pickDepartment() async {
+    final type = _empTypeCtrl.text;
+    if (type.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choose your employee type first.')),
+      );
+      return;
+    }
+    final choice = await showSearchSheet(
+      context,
+      title: isFacultyType(type) ? 'College / Department' : 'Office',
+      options: departmentOptions(type),
+      subtitles: departmentSubtitles(type),
+      selected: _deptCtrl.text,
+      searchHint: 'Search',
+    );
+    if (choice != null) setState(() => _deptCtrl.text = choice);
   }
 
   Future<void> _pickProgram() async {
@@ -205,7 +234,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       program: program,
       yearLevel: _isStudent ? _yearCtrl.text.trim() : '',
       employeeType: _isStudent ? '' : _empTypeCtrl.text.trim(),
-      department: _isStudent ? '' : _deptCtrl.text.trim(),
+      department: _isStudent ? '' : (_deptIsOther ? _deptOtherCtrl.text.trim() : _deptCtrl.text.trim()),
       birthday: _birthday,
       street: _streetCtrl.text.trim(),
       barangay: _barangayCtrl.text.trim(),
@@ -325,14 +354,32 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       const SizedBox(height: 16),
       AppTextField(
         label: 'Department / Office',
-        hint: 'e.g., College of Computer Studies',
+        hint: _empTypeCtrl.text.isEmpty
+            ? 'Choose your employee type first'
+            : 'Select your department or office',
         icon: Icons.apartment_outlined,
         controller: _deptCtrl,
         isRequired: true,
-        textInputAction: TextInputAction.next,
-        textCapitalization: TextCapitalization.words,
-        validator: (v) => Validators.required(v, 'Department / Office'),
+        readOnly: true,
+        onTap: _pickDepartment,
+        trailingIcon: Icons.keyboard_arrow_down_rounded,
+        validator: (v) => (v == null || v.isEmpty)
+            ? 'Please choose your department or office'
+            : null,
       ),
+      if (_deptIsOther) ...[
+        const SizedBox(height: 16),
+        AppTextField(
+          label: 'Your Department / Office',
+          hint: 'Type the name of your department or office',
+          icon: Icons.edit_outlined,
+          controller: _deptOtherCtrl,
+          isRequired: true,
+          textInputAction: TextInputAction.next,
+          textCapitalization: TextCapitalization.words,
+          validator: (v) => Validators.required(v, 'Department / Office'),
+        ),
+      ],
     ];
   }
 
