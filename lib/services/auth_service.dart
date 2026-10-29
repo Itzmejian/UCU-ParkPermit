@@ -316,6 +316,55 @@ class AuthService {
     }
   }
 
+/// Forgot Password, step 2: checks the code. When it is right, the user is
+  /// signed in for a moment so the new password can be saved in step 3.
+  static Future<AuthResult> verifyResetCode({
+    required String email,
+    required String code,
+  }) async {
+    if (!live) {
+      await _fake();
+      return code == kDevOtp
+          ? const AuthResult.success()
+          : const AuthResult.failure('Incorrect or expired code. Please try again.');
+    }
+    try {
+      await _client.auth.verifyOTP(
+        type: OtpType.recovery,
+        token: code,
+        email: email,
+      );
+      return const AuthResult.success();
+    } catch (e) {
+      return AuthResult.failure(_friendly(e));
+    }
+  }
+
+  /// Forgot Password, step 3: saves the new password, then signs out so the
+  /// user logs in again with it.
+  static Future<AuthResult> setNewPassword(String newPassword) async {
+    if (!live) {
+      await _fake();
+      return const AuthResult.success();
+    }
+    try {
+      await _client.auth.updateUser(UserAttributes(password: newPassword));
+      await _client.auth.signOut();
+      return const AuthResult.success();
+    } catch (e) {
+      return AuthResult.failure(_friendly(e));
+    }
+  }
+
+  /// Leaving Forgot Password after the code was checked but before a new
+  /// password was saved: ends the short sign-in.
+  static Future<void> cancelPasswordReset() async {
+    if (!live) return;
+    try {
+      await _client.auth.signOut();
+    } catch (_) {}
+  }
+
   static Future<AuthResult> changePassword({
     required String current,
     required String next,
