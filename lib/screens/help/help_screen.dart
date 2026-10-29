@@ -6,6 +6,7 @@ import '../../widgets/app_buttons.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/state_views.dart';
 import '../../widgets/status_badge.dart';
+import '../home/home_cards.dart';
 
 class _Faq {
   const _Faq(this.category, this.question, this.answer);
@@ -264,6 +265,8 @@ class _HelpScreenState extends State<HelpScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 14),
+            const HowToCard(),
             const SizedBox(height: 14),
             TextField(
               controller: _search,
