@@ -330,13 +330,18 @@ Future<void> _pickDepartment() async {
       const _SectionTitle('Employee details'),
       AppTextField(
         label: 'Employee ID Number',
-        hint: 'e.g., EMP-2023-012',
+        hint: 'e.g., 20150012',
+        keyboardType: TextInputType.number,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(8),
+        ],
         icon: Icons.badge_outlined,
         controller: _idCtrl,
         isRequired: true,
         textInputAction: TextInputAction.next,
         textCapitalization: TextCapitalization.characters,
-        validator: Validators.idNumber,
+        validator: ProfileValidators.employeeId,
       ),
       const SizedBox(height: 16),
       AppTextField(

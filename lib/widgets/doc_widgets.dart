@@ -111,11 +111,6 @@ class DocFileRow extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Replace',
-            onPressed: onReplace,
-            icon: const Icon(Icons.sync_alt, size: 20, color: AppColors.navy),
-          ),
-          IconButton(
             tooltip: 'Remove',
             onPressed: onRemove,
             icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.error),

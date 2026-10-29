@@ -15,4 +15,14 @@ class ProfileValidators {
     }
     return null;
   }
+
+  /// UCU employee ID: 8 digits, numbers only.
+  static String? employeeId(String? value) {
+    final v = (value ?? '').trim();
+    if (v.isEmpty) return 'Employee ID is required';
+    if (!RegExp(r'^\d{8}$').hasMatch(v)) {
+      return 'Enter your 8-digit Employee ID (numbers only)';
+    }
+    return null;
+  }
 }
