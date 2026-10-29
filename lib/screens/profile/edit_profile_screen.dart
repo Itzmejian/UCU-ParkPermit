@@ -65,7 +65,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     } else if (kUcuProgramOptions.contains(prog)) {
       _program.text = prog;
     } else {
-      _program.text = kOtherProgram;
+      _program.text = '';
       _other.text = prog;
     }
 
@@ -114,6 +114,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       context,
       title: 'Course / Program',
       options: kUcuProgramOptions,
+      subtitles: kUcuProgramNames,
       selected: _program.text,
       searchHint: 'Search, e.g., BSIT or Nursing',
     );

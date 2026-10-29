@@ -145,6 +145,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       context,
       title: 'Course / Program',
       options: kUcuProgramOptions,
+      subtitles: kUcuProgramNames,
       selected: _programCtrl.text,
       searchHint: 'Search, e.g., BSIT or Nursing',
     );

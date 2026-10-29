@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/app_colors.dart';
 
 /// Opens a tall bottom sheet with a search box and a long list of options.
+/// [subtitles] can add a smaller line under an option (it is searchable too).
 /// Returns the chosen option, or null when it is closed.
 Future<String?> showSearchSheet(
   BuildContext context, {
@@ -9,6 +10,7 @@ Future<String?> showSearchSheet(
   required List<String> options,
   String? selected,
   String searchHint = 'Search',
+  Map<String, String>? subtitles,
 }) {
   FocusScope.of(context).unfocus();
   return showModalBottomSheet<String>(
@@ -24,6 +26,7 @@ Future<String?> showSearchSheet(
       options: options,
       selected: selected,
       searchHint: searchHint,
+      subtitles: subtitles ?? const <String, String>{},
     ),
   );
 }
@@ -34,12 +37,14 @@ class _SearchSheet extends StatefulWidget {
     required this.options,
     required this.selected,
     required this.searchHint,
+    required this.subtitles,
   });
 
   final String title;
   final List<String> options;
   final String? selected;
   final String searchHint;
+  final Map<String, String> subtitles;
 
   @override
   State<_SearchSheet> createState() => _SearchSheetState();
@@ -55,12 +60,18 @@ class _SearchSheetState extends State<_SearchSheet> {
     );
   }
 
+  bool _matches(String option, String q) {
+    if (option.toLowerCase().contains(q)) return true;
+    final sub = widget.subtitles[option];
+    return sub != null && sub.toLowerCase().contains(q);
+  }
+
   @override
   Widget build(BuildContext context) {
     final q = _query.trim().toLowerCase();
     final items = q.isEmpty
         ? widget.options
-        : widget.options.where((o) => o.toLowerCase().contains(q)).toList();
+        : widget.options.where((o) => _matches(o, q)).toList();
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -127,15 +138,25 @@ class _SearchSheetState extends State<_SearchSheet> {
                       itemBuilder: (context, index) {
                         final o = items[index];
                         final sel = o == widget.selected;
+                        final sub = widget.subtitles[o];
                         return ListTile(
                           title: Text(
                             o,
                             style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
+                              fontSize: 14.5,
+                              fontWeight: sel ? FontWeight.w800 : FontWeight.w700,
                               color: AppColors.textDark,
                             ),
                           ),
+                          subtitle: sub == null
+                              ? null
+                              : Text(
+                                  sub,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textHint,
+                                  ),
+                                ),
                           trailing: sel
                               ? const Icon(Icons.check_circle, color: AppColors.navy)
                               : null,
