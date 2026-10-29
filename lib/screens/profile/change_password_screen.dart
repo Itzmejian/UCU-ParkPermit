@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
+import '../../models/network_store.dart';
 import '../../core/app_colors.dart';
 import '../../core/validators.dart';
 import '../../models/profile_store.dart';
@@ -36,9 +38,21 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!NetworkStore.instance.ensureOnline(context)) return;
     setState(() => _loading = true);
     // TODO: check the current password and update it with Supabase.
-    await Future<void>.delayed(const Duration(milliseconds: 800));
+    final result = await AuthService.changePassword(
+      current: _current.text,
+      next: _new.text,
+    );
+    if (!mounted) return;
+    if (!result.ok) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.error ?? 'Could not update the password.')),
+      );
+      return;
+    }
     if (!mounted) return;
     SettingsStore.instance.markPasswordChanged();
     ScaffoldMessenger.of(context).showSnackBar(

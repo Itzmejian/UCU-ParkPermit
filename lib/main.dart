@@ -1,16 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_routes.dart';
 import 'core/app_theme.dart';
+import 'core/signup_info.dart';
+import 'core/supabase_config.dart';
 import 'models/notification_store.dart';
+import 'models/profile_store.dart';
+import 'services/auth_service.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  var initialRoute = AppRoutes.welcome;
+  if (kSupabaseReady) {
+    await Supabase.initialize(url: kSupabaseUrl, publishableKey: kSupabaseAnonKey);
+    // A saved session means the user is already logged in.
+    if (Supabase.instance.client.auth.currentSession != null) {
+      await AuthService.loadProfile();
+      initialRoute = ProfileStore.instance.profileCompleted
+          ? AppRoutes.home
+          : AppRoutes.completeProfile;
+    }
+  }
+
   NotificationStore.instance.ensureStarted();
-  runApp(const ParkPermitApp());
+  runApp(ParkPermitApp(initialRoute: initialRoute));
 }
 
 class ParkPermitApp extends StatelessWidget {
-  const ParkPermitApp({super.key});
+  const ParkPermitApp({super.key, this.initialRoute = AppRoutes.welcome});
+
+  final String initialRoute;
 
   @override
   Widget build(BuildContext context) {
@@ -18,8 +38,21 @@ class ParkPermitApp extends StatelessWidget {
       title: 'UCU ParkPermit',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      initialRoute: AppRoutes.welcome,
-      onGenerateRoute: AppRoutes.onGenerateRoute,
+      initialRoute: initialRoute,
+      onGenerateRoute: (settings) {
+        var s = settings;
+        // Opening Complete Profile directly (saved session): use the stored role.
+        if (settings.name == AppRoutes.completeProfile && settings.arguments == null) {
+          s = RouteSettings(
+            name: settings.name,
+            arguments: SignupInfo(
+              email: ProfileStore.instance.email,
+              role: ProfileStore.instance.role,
+            ),
+          );
+        }
+        return AppRoutes.onGenerateRoute(s);
+      },
     );
   }
 }

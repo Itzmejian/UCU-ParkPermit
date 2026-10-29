@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
 import '../../widgets/app_buttons.dart';
@@ -70,6 +71,8 @@ class PrivacySecurityScreen extends StatelessWidget {
       ),
     );
     if (ok == true && context.mounted) {
+      await AuthService.signOut();
+      if (!context.mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (r) => false);
     }
   }

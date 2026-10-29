@@ -16,7 +16,7 @@ Future<PickResult?> pickDocument() async {
     result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: kAllowedExtensions,
-      withData: false,
+      withData: true,
     );
   } catch (_) {
     return const PickResult(
@@ -36,5 +36,7 @@ Future<PickResult?> pickDocument() async {
       error: 'This file is $mb MB. The maximum is $kMaxUploadMb MB.',
     );
   }
-  return PickResult(doc: PickedDoc(name: f.name, sizeBytes: f.size));
+  return PickResult(
+    doc: PickedDoc(name: f.name, sizeBytes: f.size, bytes: f.bytes),
+  );
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../core/app_limits.dart';
 import 'application_draft.dart';
+import 'flagged_document.dart';
 import 'permit_status.dart';
 
 class SubmittedApplication {
@@ -54,6 +55,16 @@ class VehicleRecord {
     required this.registeredAt,
     this.status = PermitStatus.pending,
     this.pendingVerification = false,
+    this.remoteId,
+    this.applicationId,
+    this.permitId,
+    this.permitNo,
+    this.zoneLabel,
+    this.validFrom,
+    this.validUntil,
+    this.stickerStatus,
+    this.flagged = const [],
+    this.officerNote,
   });
 
   final int id;
@@ -65,13 +76,26 @@ class VehicleRecord {
   /// True after a plate change, until the Security Office verifies it again.
   bool pendingVerification;
 
+  // Filled when the data comes from the server.
+  final String? remoteId;
+  final String? applicationId;
+  final String? permitId;
+  final String? permitNo;
+  final String? zoneLabel;
+  final DateTime? validFrom;
+  final DateTime? validUntil;
+  final String? stickerStatus;
+  final List<FlaggedDocument> flagged;
+  final String? officerNote;
+
   VehicleType get type => draft.vehicleType ?? VehicleType.fourWheel;
   String get plate => draft.plateDisplay;
   String get makeModel => draft.makeModel.trim();
   String get title => makeModel.isEmpty ? plate : makeModel;
 }
 
-/// In-memory data until the app is connected to Supabase.
+/// The data shown in the app. In prototype mode it lives in memory; when the
+/// app is connected to Supabase, DataService fills it from the database.
 class ApplicationStore extends ChangeNotifier {
   ApplicationStore._();
 
@@ -145,6 +169,63 @@ class ApplicationStore extends ChangeNotifier {
     );
   }
 
+  // ---------- server data ----------
+
+  /// Replaces everything with the data loaded from the database.
+  void loadSnapshot({
+    required List<VehicleRecord> vehicles,
+    required List<SubmittedApplication> submitted,
+    ApplicationDraft? draft,
+    AppealRecord? appeal,
+    StickerReplacementRequest? replacement,
+  }) {
+    _vehicles
+      ..clear()
+      ..addAll(vehicles);
+    _sampleVehicle = null;
+    submittedList
+      ..clear()
+      ..addAll(submitted);
+    this.draft = draft;
+
+    // Keep the same object when nothing changed, so no duplicate notifications.
+    if (appeal == null) {
+      lastAppeal = null;
+    } else if (lastAppeal == null || lastAppeal!.ticketNo != appeal.ticketNo) {
+      lastAppeal = appeal;
+    }
+    if (replacement == null) {
+      this.replacement = null;
+    } else {
+      final old = this.replacement;
+      if (old == null ||
+          old.reason != replacement.reason ||
+          old.requestedAt != replacement.requestedAt) {
+        this.replacement = replacement;
+      }
+    }
+
+    status = vehicles.isNotEmpty
+        ? vehicles.first.status
+        : (draft != null ? PermitStatus.draft : PermitStatus.none);
+    notifyListeners();
+  }
+
+  /// Forgets everything (used when logging out).
+  void clear() {
+    draft = null;
+    submittedList.clear();
+    _vehicles.clear();
+    _sampleVehicle = null;
+    status = PermitStatus.none;
+    lastAppeal = null;
+    replacement = null;
+    debugSlots = null;
+    notifyListeners();
+  }
+
+  // ---------- prototype mode ----------
+
   void setStatus(PermitStatus s) {
     status = s;
     if (_vehicles.isNotEmpty && _hasVehicleStatus(s)) {
@@ -178,7 +259,6 @@ class ApplicationStore extends ChangeNotifier {
     return sub;
   }
 
-  /// If only the sample vehicle is showing, keep it as a real vehicle first.
   void _promoteSample() {
     if (_vehicles.isEmpty) {
       final list = vehicles;
@@ -199,7 +279,6 @@ class ApplicationStore extends ChangeNotifier {
       ),
     );
     draft = null;
-    // The Home dashboard follows the first (primary) vehicle.
     if (_vehicles.length == 1) status = PermitStatus.pending;
     notifyListeners();
     return sub;
@@ -250,7 +329,6 @@ class ApplicationStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Changes the vehicle details. A plate change needs verification again.
   void updateVehicle(
     int id, {
     required String plate,
@@ -272,7 +350,6 @@ class ApplicationStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// TESTING ONLY: pretend the Security Office verified the update.
   void markVerified(int id) {
     final v = vehicleById(id);
     if (v == null) return;

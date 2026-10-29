@@ -1,16 +1,13 @@
+import '../core/date_format.dart';
 import 'application_draft.dart';
 import 'application_store.dart';
+import 'flagged_document.dart';
 import 'permit_status.dart';
 
-class FlaggedDocument {
-  const FlaggedDocument({required this.title, required this.remark});
+export 'flagged_document.dart';
 
-  final String title;
-  final String remark;
-}
-
-/// Sample data used until the app is connected to Supabase.
-/// If the user registered a vehicle, its details replace the sample.
+/// Sample data for the prototype. When the user has real vehicle data
+/// (from Supabase or from the wizard), that data replaces the sample.
 class MockApplication {
   const MockApplication({
     required this.referenceNo,
@@ -22,6 +19,7 @@ class MockApplication {
     required this.validUntil,
     required this.flagged,
     required this.officerNote,
+    this.validFrom,
   });
 
   final String referenceNo;
@@ -31,6 +29,7 @@ class MockApplication {
   final String zone;
   final String permitNo;
   final String validUntil;
+  final String? validFrom;
   final List<FlaggedDocument> flagged;
   final String officerNote;
 
@@ -48,6 +47,7 @@ class MockApplication {
       zone: zone,
       permitNo: permitNo,
       validUntil: validUntil,
+      validFrom: validFrom,
       flagged: flagged,
       officerNote: officerNote,
     );
@@ -72,6 +72,7 @@ class MockApplication {
           title: 'Vehicle OR/CR',
           remark:
               'The plate number is not readable in the photo. Upload a clearer, uncropped copy.',
+          kind: 'orcr',
         ),
       ],
       officerNote:
@@ -79,21 +80,43 @@ class MockApplication {
     );
   }
 
-  /// Sample data, with the primary vehicle's own details when it has any.
+  /// The sample data with the details of one real vehicle on top.
+  static MockApplication forVehicle(VehicleRecord v) {
+    return _overlay(forStatus(v.status), v);
+  }
+
+  static MockApplication _overlay(MockApplication base, VehicleRecord v) {
+    final d = v.draft;
+    final live = v.remoteId != null;
+    return MockApplication(
+      referenceNo: v.referenceNo,
+      vehicleName: d.makeModel.trim().isEmpty ? base.vehicleName : d.makeModel.trim(),
+      plate: d.plate.trim().isEmpty ? base.plate : d.plateDisplay,
+      vehicleType: d.vehicleType?.label ?? base.vehicleType,
+      zone: v.zoneLabel ?? base.zone,
+      permitNo: v.permitNo ?? base.permitNo,
+      validUntil: v.validUntil == null ? base.validUntil : formatLongDate(v.validUntil!),
+      validFrom: v.validFrom == null ? null : formatLongDate(v.validFrom!),
+      flagged: live ? v.flagged : base.flagged,
+      officerNote: live ? (v.officerNote ?? '') : base.officerNote,
+    );
+  }
+
+  /// The data for the primary vehicle (or the sample if there is none).
   static MockApplication resolve(PermitStatus status) {
     final base = forStatus(status);
     final store = ApplicationStore.instance;
+    if (status == PermitStatus.draft) {
+      final ApplicationDraft? d = store.draft;
+      if (d == null) return base;
+      return base.copyWith(
+        vehicleName: d.makeModel.trim().isEmpty ? null : d.makeModel.trim(),
+        plate: d.plate.trim().isEmpty ? null : d.plateDisplay,
+        vehicleType: d.vehicleType?.label,
+      );
+    }
     final vehicles = store.vehicles;
-    final primary = vehicles.isEmpty ? null : vehicles.first;
-    final ApplicationDraft? d = status == PermitStatus.draft
-        ? (store.draft ?? primary?.draft)
-        : primary?.draft;
-    if (d == null) return base;
-    return base.copyWith(
-      referenceNo: status == PermitStatus.draft ? null : primary?.referenceNo,
-      vehicleName: d.makeModel.trim().isEmpty ? null : d.makeModel.trim(),
-      plate: d.plate.trim().isEmpty ? null : d.plateDisplay,
-      vehicleType: d.vehicleType?.label,
-    );
+    if (vehicles.isEmpty) return base;
+    return _overlay(base, vehicles.first);
   }
 }

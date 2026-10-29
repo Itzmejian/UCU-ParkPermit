@@ -9,6 +9,11 @@ import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/verify_email_screen.dart';
 import '../screens/auth/welcome_screen.dart';
+import '../screens/help/contact_support_screen.dart';
+import '../screens/help/help_screen.dart';
+import '../screens/help/parking_policy_screen.dart';
+import '../screens/help/parking_zones_screen.dart';
+import '../screens/help/permit_requirements_screen.dart';
 import '../screens/notifications/notifications_screen.dart';
 import '../screens/permit/permit_details_screen.dart';
 import '../screens/permit/permit_expired_screen.dart';
@@ -144,8 +149,22 @@ class AppRoutes {
       case privacySecurity:
         page = const PrivacySecurityScreen();
         break;
+      case help:
+        page = const HelpScreen();
+        break;
+      case contactSupport:
+        page = const ContactSupportScreen();
+        break;
+      case permitRequirements:
+        page = const PermitRequirementsScreen();
+        break;
+      case parkingPolicy:
+        page = const ParkingPolicyScreen();
+        break;
+      case parkingZones:
+        page = const ParkingZonesScreen();
+        break;
       default:
-        // Screens that are not built yet open a "Coming soon" page.
         page = PlaceholderScreen(routeName: settings.name ?? 'unknown');
     }
     return MaterialPageRoute<void>(builder: (_) => page, settings: settings);

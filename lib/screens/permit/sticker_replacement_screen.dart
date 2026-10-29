@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/data_service.dart';
+import '../../models/network_store.dart';
 import '../../core/app_colors.dart';
 import '../../models/application_store.dart';
 import '../../widgets/app_buttons.dart';
@@ -42,8 +44,28 @@ class _StickerReplacementScreenState extends State<StickerReplacementScreen> {
   }
 
   Future<void> _submit() async {
+    if (!NetworkStore.instance.ensureOnline(context)) return;
     setState(() => _loading = true);
     // TODO: send the request to Supabase.
+    if (DataService.live) {
+      final r = await DataService.requestReplacement(
+        reason: _reason!,
+        details: _detailsCtrl.text.trim(),
+      );
+      if (!mounted) return;
+      if (!r.ok) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(r.error ?? 'Could not send your request.')),
+        );
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Replacement requested. We will notify you.')),
+      );
+      Navigator.pop(context);
+      return;
+    }
     await Future<void>.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
     ApplicationStore.instance.requestReplacement(

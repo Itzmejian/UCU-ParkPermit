@@ -313,8 +313,8 @@ class PermitDetailsScreen extends StatelessWidget {
               const SizedBox(height: 4),
               _row('Vehicle type', app.vehicleType),
               _row('Parking zone', app.zone),
-              _row('Academic year', _academicYear(status)),
-              _row('Valid from', _validFrom(status)),
+              if (app.validFrom == null) _row('Academic year', _academicYear(status)),
+              _row('Valid from', app.validFrom ?? _validFrom(status)),
               _row(
                 'Valid until',
                 app.validUntil,

@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import '../core/signup_info.dart';
 
-/// The signed-in user's profile. In-memory until the app uses Supabase.
-/// The sample values below are shown only until someone registers.
+/// The signed-in user's profile. Filled from Supabase when connected.
+/// The sample values below are shown only until someone registers or logs in.
 class ProfileStore extends ChangeNotifier {
   ProfileStore._();
 
@@ -22,6 +22,7 @@ class ProfileStore extends ChangeNotifier {
   String city = 'Urdaneta City';
   String province = 'Pangasinan';
   String phone = '9171234567';
+  bool profileCompleted = true;
 
   bool get isStudent => role == kRoleStudent;
 
@@ -61,11 +62,31 @@ class ProfileStore extends ChangeNotifier {
   }
 
   String get detailLine {
-    final parts = isStudent
-        ? [program, yearLevel]
-        : [employeeType, department];
+    final parts = isStudent ? [program, yearLevel] : [employeeType, department];
     final text = parts.where((p) => p.trim().isNotEmpty).join('  \u2022  ');
     return text.isEmpty ? '-' : text;
+  }
+
+  /// Fills the profile from a row of the `profiles` table.
+  void loadFromMap(Map<String, dynamic> m) {
+    String s(String key) => (m[key] as String?) ?? '';
+    fullName = s('full_name');
+    email = s('email');
+    role = m['role'] == 'employee' ? kRoleEmployee : kRoleStudent;
+    idNumber = s('id_number');
+    program = s('program');
+    yearLevel = s('year_level');
+    employeeType = s('employee_type');
+    department = s('department');
+    final b = m['birthday'];
+    birthday = b is String ? DateTime.tryParse(b) : null;
+    street = s('street');
+    barangay = s('barangay');
+    city = s('city');
+    province = s('province');
+    phone = s('phone');
+    profileCompleted = m['profile_completed'] == true;
+    notifyListeners();
   }
 
   /// Called when someone registers. Starts a clean profile.
@@ -88,6 +109,7 @@ class ProfileStore extends ChangeNotifier {
     city = '';
     province = '';
     phone = '';
+    profileCompleted = false;
     notifyListeners();
   }
 
@@ -116,6 +138,7 @@ class ProfileStore extends ChangeNotifier {
     this.city = city;
     this.province = province;
     this.phone = phone;
+    profileCompleted = true;
     notifyListeners();
   }
 

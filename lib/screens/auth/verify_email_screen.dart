@@ -3,6 +3,9 @@ import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
 import '../../core/constants.dart';
 import '../../core/signup_info.dart';
+import '../../models/network_store.dart';
+import '../../models/profile_store.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/app_buttons.dart';
 import '../../widgets/icon_badge.dart';
 import '../../widgets/otp_input.dart';
@@ -27,6 +30,11 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     super.dispose();
   }
 
+  String get _email {
+    final arg = ModalRoute.of(context)?.settings.arguments;
+    return arg is SignupInfo ? arg.email : ProfileStore.instance.email;
+  }
+
   Future<void> _verify() async {
     if (_loading) return;
     final code = _codeCtrl.text.trim();
@@ -34,17 +42,17 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       setState(() => _error = 'Enter the $kOtpLength-digit code.');
       return;
     }
+    if (!NetworkStore.instance.ensureOnline(context)) return;
     setState(() {
       _loading = true;
       _error = null;
     });
-    // TODO: Supabase verifyOtp (type: signup) goes here.
-    await Future<void>.delayed(const Duration(milliseconds: 700));
+    final result = await AuthService.verifySignupCode(email: _email, code: code);
     if (!mounted) return;
-    if (code != kDevOtp) {
+    if (!result.ok) {
       setState(() {
         _loading = false;
-        _error = 'Incorrect or expired code. Please try again.';
+        _error = result.error ?? 'Incorrect or expired code. Please try again.';
       });
       _codeCtrl.clear();
       return;
@@ -53,24 +61,29 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     Navigator.pushReplacementNamed(
       context,
       AppRoutes.completeProfile,
-      arguments: ModalRoute.of(context)?.settings.arguments,
+      arguments: SignupInfo(email: _email, role: ProfileStore.instance.role),
     );
   }
 
-  void _resend(String email) {
-    // TODO: Supabase resend signup code goes here.
+  Future<void> _resend() async {
+    if (!NetworkStore.instance.ensureOnline(context)) return;
+    final email = _email;
+    final result = await AuthService.resendSignupCode(email);
+    if (!mounted) return;
     _codeCtrl.clear();
     setState(() => _error = null);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('A new code was sent to $email')),
+      SnackBar(
+        content: Text(
+          result.ok ? 'A new code was sent to $email' : (result.error ?? 'Could not send a new code.'),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final arg = ModalRoute.of(context)?.settings.arguments;
-    final info = arg is SignupInfo ? arg : null;
-    final email = info?.email ?? 'your email';
+    final email = _email;
 
     return Scaffold(
       appBar: AppBar(automaticallyImplyLeading: false),
@@ -128,10 +141,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                   child: Text(
                     _error!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      color: AppColors.error,
-                    ),
+                    style: const TextStyle(fontSize: 12.5, color: AppColors.error),
                   ),
                 ),
               const SizedBox(height: 24),
@@ -146,15 +156,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                 child: ResendButton(
                   label: 'Resend code',
                   cooldownSeconds: kOtpResendSeconds,
-                  onResend: () => _resend(email),
+                  onResend: _resend,
                 ),
               ),
               const Text(
-                'The code expires in 10 minutes. Check your spam folder if it does not arrive.',
+                'The code is valid for 1 hour. Check your spam folder if it does not arrive.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.textHint),
               ),
-              if (kShowDevOtpHint) ...[
+              if (kShowDevOtpHint && !AuthService.live) ...[
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(10),
@@ -164,7 +174,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                     border: Border.all(color: AppColors.gold),
                   ),
                   child: const Text(
-                    'Testing mode: no email is sent yet. Use code $kDevOtp.',
+                    'Prototype mode: no email is sent. Use code $kDevOtp.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 12, color: AppColors.goldDark),
                   ),

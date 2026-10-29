@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
+import '../../models/network_store.dart';
 import 'package:flutter/services.dart';
 import '../../core/app_colors.dart';
 import '../../core/date_format.dart';
@@ -90,9 +92,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!NetworkStore.instance.ensureOnline(context)) return;
     setState(() => _loading = true);
     // TODO: save the profile changes to Supabase.
-    await Future<void>.delayed(const Duration(milliseconds: 700));
+    final result = await AuthService.saveEditableProfile(
+      fullName: _name.text.trim(),
+      phone: _phone.text.trim(),
+      program: _program.text.trim(),
+      yearLevel: _year.text.trim(),
+      employeeType: _empType.text.trim(),
+      department: _dept.text.trim(),
+      street: _street.text.trim(),
+      barangay: _barangay.text.trim(),
+      city: _city.text.trim(),
+      province: _province.text.trim(),
+    );
+    if (!mounted) return;
+    if (!result.ok) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.error ?? 'Could not save your changes.')),
+      );
+      return;
+    }
     if (!mounted) return;
     ProfileStore.instance.updateEditable(
       fullName: _name.text.trim(),

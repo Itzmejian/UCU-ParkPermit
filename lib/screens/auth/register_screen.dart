@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
+import '../../models/network_store.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
 import '../../core/signup_info.dart';
@@ -45,6 +47,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _termsError = !_accepted;
     });
     if (!valid || _role == null || !_accepted) return;
+    if (!NetworkStore.instance.ensureOnline(context)) return;
     setState(() => _loading = true);
     // TODO: Supabase sign up goes here (save the role with the account).
     ProfileStore.instance.setAccount(
@@ -52,7 +55,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       email: _emailCtrl.text.trim(),
       role: _role!,
     );
-    await Future<void>.delayed(const Duration(milliseconds: 700));
+    final result = await AuthService.signUp(
+      email: _emailCtrl.text.trim(),
+      password: _passCtrl.text,
+      fullName: _nameCtrl.text.trim(),
+      role: _role!,
+    );
+    if (!mounted) return;
+    if (!result.ok) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.error ?? 'Could not create the account.')),
+      );
+      return;
+    }
     if (!mounted) return;
     setState(() => _loading = false);
     Navigator.pushReplacementNamed(

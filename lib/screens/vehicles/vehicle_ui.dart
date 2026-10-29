@@ -64,7 +64,7 @@ String vehicleInfoText(VehicleRecord v) {
   if (v.pendingVerification) {
     return 'Your update is waiting for verification (about 24 hours).';
   }
-  final app = MockApplication.forStatus(v.status);
+  final app = MockApplication.forVehicle(v);
   final permit = app.permitNo;
   final until = app.validUntil;
   return switch (v.status) {

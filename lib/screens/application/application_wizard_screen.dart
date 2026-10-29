@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/data_service.dart';
+import '../../models/network_store.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_limits.dart';
 import '../../core/app_routes.dart';
@@ -107,6 +109,7 @@ class _ApplicationWizardScreenState extends State<ApplicationWizardScreen> {
       _saveDraftAndLeave();
     } else if (choice == _ExitChoice.discard) {
       _store.discardDraft();
+      DataService.discardDraft();
       Navigator.pop(context);
     }
   }
@@ -114,6 +117,7 @@ class _ApplicationWizardScreenState extends State<ApplicationWizardScreen> {
   void _saveDraftAndLeave() {
     _draft.step = _step;
     _store.saveDraft(_draft.clone());
+    DataService.saveDraft(_draft);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Draft saved. Continue anytime from Home.')),
     );
@@ -121,8 +125,26 @@ class _ApplicationWizardScreenState extends State<ApplicationWizardScreen> {
   }
 
   Future<void> _submit() async {
+    if (!NetworkStore.instance.ensureOnline(context)) return;
     setState(() => _submitting = true);
     // TODO: upload the files to Supabase Storage and create the application row.
+    if (DataService.live) {
+      final r = await DataService.submitApplication(_draft);
+      if (!mounted) return;
+      if (!r.ok) {
+        setState(() => _submitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(r.error ?? 'Could not submit your application.')),
+        );
+        return;
+      }
+      Navigator.pushReplacementNamed(
+        context,
+        AppRoutes.applicationSubmitted,
+        arguments: r.value,
+      );
+      return;
+    }
     await Future<void>.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
     final sub = _store.submit(_draft.clone());
@@ -313,7 +335,7 @@ class _ApplicationWizardScreenState extends State<ApplicationWizardScreen> {
                   children: [
                     _progress(),
                     Expanded(child: _stepBody()),
-                    if (kShowDevTools && _step == 0)
+                    if (kShowDevTools && !DataService.live && _step == 0)
                       TextButton(
                         onPressed: () =>
                             setState(() => _store.debugSlots = kMaxVehicles),

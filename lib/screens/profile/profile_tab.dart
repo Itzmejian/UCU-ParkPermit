@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
+import '../../core/constants.dart';
 import '../../core/date_format.dart';
+import '../../models/network_store.dart';
 import '../../models/profile_store.dart';
 import '../../widgets/settings_tile.dart';
 import '../../widgets/status_badge.dart';
@@ -34,6 +37,8 @@ class ProfileTab extends StatelessWidget {
       ),
     );
     if (ok == true && context.mounted) {
+      await AuthService.signOut();
+      if (!context.mounted) return;
       Navigator.pushNamedAndRemoveUntil(
         context,
         AppRoutes.welcome,
@@ -188,6 +193,24 @@ class ProfileTab extends StatelessWidget {
                 ),
               ],
             ),
+            if (kShowDevTools) ...[
+              const SizedBox(height: 16),
+              AnimatedBuilder(
+                animation: NetworkStore.instance,
+                builder: (context, child) => SettingsGroup(
+                  title: 'Testing only',
+                  children: [
+                    SettingsSwitchTile(
+                      icon: Icons.wifi_off_rounded,
+                      title: 'Simulate no internet',
+                      subtitle: 'Shows the offline banner and pauses actions that need internet',
+                      value: NetworkStore.instance.isOffline,
+                      onChanged: NetworkStore.instance.setOffline,
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             SettingsGroup(
               title: 'Session',

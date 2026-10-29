@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
+import '../../services/data_service.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
 import '../../core/constants.dart';
@@ -132,7 +134,17 @@ class VehicleDetailsScreen extends StatelessWidget {
     if (ok != true || !context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     Navigator.pop(context);
-    ApplicationStore.instance.removeVehicle(v.id);
+    if (DataService.live) {
+      final r = await DataService.removeVehicle(v);
+      if (!r.ok) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(r.error ?? 'Could not remove the vehicle.')),
+        );
+        return;
+      }
+    } else {
+      ApplicationStore.instance.removeVehicle(v.id);
+    }
     messenger.showSnackBar(
       const SnackBar(content: Text('Vehicle removed. One slot is free again.')),
     );
@@ -226,7 +238,7 @@ class VehicleDetailsScreen extends StatelessWidget {
         final primary = store.isPrimary(v.id);
         final badge = badgeFor(v);
         final moto = v.type == VehicleType.motorcycle;
-        final app = MockApplication.forStatus(v.status);
+        final app = MockApplication.forVehicle(v);
         final showPermit = hasPermitNumber(v.status);
 
         return Scaffold(
@@ -378,7 +390,7 @@ class VehicleDetailsScreen extends StatelessWidget {
                     style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.error),
                   ),
                 ),
-                if (kShowDevTools && v.pendingVerification)
+                if (kShowDevTools && !AuthService.live && v.pendingVerification)
                   TextButton(
                     onPressed: () => store.markVerified(v.id),
                     child: const Text(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
 import '../../core/constants.dart';
@@ -91,7 +92,7 @@ class _HomeTabState extends State<HomeTab> {
             roleLabel: ProfileStore.instance.roleBadge,
           ),
         ),
-        if (kShowDevTools) ...[
+        if (kShowDevTools && !AuthService.live) ...[
           const SizedBox(height: 12),
           _DevSwitcher(
             current: _status,

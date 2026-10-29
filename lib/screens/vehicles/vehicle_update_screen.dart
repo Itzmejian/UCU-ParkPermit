@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/data_service.dart';
+import '../../models/network_store.dart';
 import 'package:flutter/services.dart';
 import '../../core/app_colors.dart';
 import '../../core/doc_picker.dart';
@@ -108,8 +110,34 @@ class _VehicleUpdateScreenState extends State<VehicleUpdateScreen> {
     if (!_formKey.currentState!.validate()) return;
     final v = _vehicle!;
     final plateChanged = _plateChanged;
+    if (!NetworkStore.instance.ensureOnline(context)) return;
     setState(() => _loading = true);
     // TODO: send the update (and the new OR/CR) to Supabase.
+    if (DataService.live) {
+      final r = await DataService.updateVehicle(
+        vehicle: v,
+        plate: _plate.text.trim().toUpperCase(),
+        makeModel: _make.text.trim(),
+        color: _color.text.trim(),
+        modelYear: _year.text.trim(),
+        newOrcr: plateChanged ? _orcr : null,
+      );
+      if (!mounted) return;
+      if (!r.ok) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(r.error ?? 'Could not update the vehicle.')),
+        );
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(plateChanged ? 'Update sent for verification.' : 'Changes saved.'),
+        ),
+      );
+      Navigator.pop(context);
+      return;
+    }
     await Future<void>.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
     ApplicationStore.instance.updateVehicle(

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/data_service.dart';
+import '../../models/network_store.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
 import '../../core/doc_picker.dart';
@@ -77,8 +79,34 @@ class _AppealScreenState extends State<AppealScreen> {
   }
 
   Future<void> _submit() async {
+    if (!NetworkStore.instance.ensureOnline(context)) return;
     setState(() => _loading = true);
     // TODO: upload the files to Supabase Storage and create the appeal row.
+    if (DataService.live) {
+      final uploads = <AppealUpload>[
+        for (final e in _replacements.entries)
+          AppealUpload(kind: _app.flagged[e.key].kind ?? 'orcr', doc: e.value),
+        if (_optionalDoc != null) AppealUpload(kind: 'ucu_id', doc: _optionalDoc!),
+      ];
+      final r = await DataService.submitAppeal(
+        statement: _statementCtrl.text.trim(),
+        uploads: uploads,
+      );
+      if (!mounted) return;
+      if (!r.ok) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(r.error ?? 'Could not send your appeal.')),
+        );
+        return;
+      }
+      Navigator.pushReplacementNamed(
+        context,
+        AppRoutes.appealSubmitted,
+        arguments: r.value,
+      );
+      return;
+    }
     await Future<void>.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
     final files = <String>[

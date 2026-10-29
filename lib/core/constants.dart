@@ -5,10 +5,10 @@ const String kUcuEmailDomain = 'ucu.edu.ph';
 
 /// Email verification code.
 const int kOtpLength = 6;
-const int kOtpResendSeconds = 30;
+const int kOtpResendSeconds = 60;
 
-/// TESTING ONLY: the code the app accepts until Supabase sends real codes.
-/// Remove these two lines when the backend is connected.
+/// TESTING ONLY (prototype mode): the code accepted while the app is not
+/// connected to Supabase.
 const String kDevOtp = '123456';
 const bool kShowDevOtpHint = true;
 

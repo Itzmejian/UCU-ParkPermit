@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
+import '../../models/network_store.dart';
 import 'package:flutter/services.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
@@ -151,6 +153,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!NetworkStore.instance.ensureOnline(context)) return;
     setState(() => _loading = true);
     // TODO: save all profile details to the Supabase profile.
     ProfileStore.instance.setDetails(
@@ -166,7 +169,15 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       province: _provinceCtrl.text.trim(),
       phone: _phoneCtrl.text.trim(),
     );
-    await Future<void>.delayed(const Duration(milliseconds: 700));
+    final result = await AuthService.saveProfileDetails();
+    if (!mounted) return;
+    if (!result.ok) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.error ?? 'Could not save your profile.')),
+      );
+      return;
+    }
     if (!mounted) return;
     setState(() => _loading = false);
     Navigator.pushNamedAndRemoveUntil(

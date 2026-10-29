@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../core/signup_info.dart';
+import '../../models/profile_store.dart';
+import '../../services/auth_service.dart';
+import '../../models/network_store.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
 import '../../core/validators.dart';
@@ -30,12 +34,45 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!NetworkStore.instance.ensureOnline(context)) return;
     setState(() => _loading = true);
     // TODO: Supabase sign in goes here.
-    await Future<void>.delayed(const Duration(milliseconds: 700));
+    final result = await AuthService.signIn(
+      _emailCtrl.text.trim(),
+      _passCtrl.text,
+    );
+    if (!mounted) return;
+    if (!result.ok) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.error ?? 'Could not log in.')),
+      );
+      if (result.needsVerification) {
+        Navigator.pushReplacementNamed(
+          context,
+          AppRoutes.verifyEmail,
+          arguments: SignupInfo(
+            email: _emailCtrl.text.trim(),
+            role: ProfileStore.instance.role,
+          ),
+        );
+      }
+      return;
+    }
     if (!mounted) return;
     setState(() => _loading = false);
-    Navigator.pushReplacementNamed(context, AppRoutes.home);
+    if (AuthService.live && !ProfileStore.instance.profileCompleted) {
+      Navigator.pushReplacementNamed(
+        context,
+        AppRoutes.completeProfile,
+        arguments: SignupInfo(
+          email: ProfileStore.instance.email,
+          role: ProfileStore.instance.role,
+        ),
+      );
+    } else {
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
+    }
   }
 
   @override

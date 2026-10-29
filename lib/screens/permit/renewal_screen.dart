@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/data_service.dart';
+import '../../models/network_store.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
 import '../../core/doc_picker.dart';
@@ -44,8 +46,30 @@ class _RenewalScreenState extends State<RenewalScreen> {
   }
 
   Future<void> _submit() async {
+    if (!NetworkStore.instance.ensureOnline(context)) return;
     setState(() => _loading = true);
     // TODO: upload the files to Supabase Storage and create the renewal.
+    if (DataService.live) {
+      final r = await DataService.submitRenewal(
+        orcr: _orcr!,
+        license: _license!,
+        ucuId: _ucuId,
+      );
+      if (!mounted) return;
+      if (!r.ok) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(r.error ?? 'Could not submit your renewal.')),
+        );
+        return;
+      }
+      Navigator.pushReplacementNamed(
+        context,
+        AppRoutes.applicationSubmitted,
+        arguments: r.value,
+      );
+      return;
+    }
     await Future<void>.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
 

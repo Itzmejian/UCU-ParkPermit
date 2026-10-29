@@ -73,7 +73,7 @@ class _StepDocumentsState extends State<StepDocuments> {
       result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: kAllowedExtensions,
-        withData: false,
+        withData: true,
       );
     } catch (_) {
       if (!mounted) return;
@@ -96,7 +96,7 @@ class _StepDocumentsState extends State<StepDocuments> {
     }
     setState(() {
       _errors.remove(slot);
-      _setDoc(slot, PickedDoc(name: f.name, sizeBytes: f.size));
+      _setDoc(slot, PickedDoc(name: f.name, sizeBytes: f.size, bytes: f.bytes));
     });
   }
 

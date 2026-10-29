@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/app_routes.dart';
+import '../core/supabase_config.dart';
 import 'application_store.dart';
 import 'permit_status.dart';
 import 'profile_store.dart';
@@ -8,6 +10,19 @@ enum NotifKind { permit, sticker, expiry, account }
 
 extension NotifKindInfo on NotifKind {
   bool get isPermit => this != NotifKind.account;
+}
+
+NotifKind notifKindFrom(String? s) {
+  switch (s) {
+    case 'sticker':
+      return NotifKind.sticker;
+    case 'expiry':
+      return NotifKind.expiry;
+    case 'account':
+      return NotifKind.account;
+    default:
+      return NotifKind.permit;
+  }
 }
 
 class NotificationItem {
@@ -21,7 +36,7 @@ class NotificationItem {
     this.read = false,
   });
 
-  final int id;
+  final String id;
   final NotifKind kind;
   final String title;
   final String body;
@@ -30,19 +45,24 @@ class NotificationItem {
   bool read;
 }
 
-/// In-app notifications. They are created from changes in the application
-/// store, until the app gets real notifications from Supabase.
+/// The notification bell. When the app is connected to Supabase the server
+/// creates the notifications and they arrive live. In prototype mode they are
+/// created in the app from changes in the application store.
 class NotificationStore extends ChangeNotifier {
   NotificationStore._() {
-    _items.add(
-      NotificationItem(
-        id: _nextId++,
-        kind: NotifKind.account,
-        title: 'Welcome to UCU ParkPermit',
-        body: 'Your account is ready. Apply for your parking permit from the Home tab.',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-    );
+    if (!kSupabaseReady) {
+      _items.add(
+        NotificationItem(
+          id: 'local-${_nextId++}',
+          kind: NotifKind.account,
+          title: 'Welcome to UCU ParkPermit',
+          body: 'Your account is ready. Apply for your parking permit from the Home tab.',
+          createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        ),
+      );
+    }
+    // Changing the notification preferences updates the list and the bell.
+    SettingsStore.instance.addListener(notifyListeners);
   }
 
   static final NotificationStore instance = NotificationStore._();
@@ -50,31 +70,16 @@ class NotificationStore extends ChangeNotifier {
   final List<NotificationItem> _items = [];
   int _nextId = 1;
   bool _started = false;
+  bool muted = false;
 
   PermitStatus _lastStatus = PermitStatus.none;
   int _lastSubmitted = 0;
   AppealRecord? _lastAppeal;
   StickerReplacementRequest? _lastReplacement;
 
-  List<NotificationItem> get items => List<NotificationItem>.unmodifiable(_items);
-
-  int get unreadCount => _items.where((n) => !n.read).length;
-
-  /// Starts watching the application store. Safe to call more than once.
-  void ensureStarted() {
-    if (_started) return;
-    _started = true;
-    final app = ApplicationStore.instance;
-    _lastStatus = app.status;
-    _lastSubmitted = app.submittedList.length;
-    _lastAppeal = app.lastAppeal;
-    _lastReplacement = app.replacement;
-    app.addListener(_onAppChanged);
-  }
-
-  bool _enabled(NotifKind kind) {
+  bool _visible(NotificationItem n) {
     final s = SettingsStore.instance;
-    return switch (kind) {
+    return switch (n.kind) {
       NotifKind.permit => s.permitUpdates,
       NotifKind.sticker => s.stickerReminders,
       NotifKind.expiry => s.expiryReminders,
@@ -82,39 +87,87 @@ class NotificationStore extends ChangeNotifier {
     };
   }
 
-  void add({
-    required NotifKind kind,
-    required String title,
-    required String body,
-    String? route,
-  }) {
-    if (!_enabled(kind)) return;
-    final now = DateTime.now();
-    if (_items.isNotEmpty) {
-      final latest = _items.first;
-      if (latest.title == title && now.difference(latest.createdAt).inSeconds < 3) {
-        return;
-      }
-    }
-    _items.insert(
-      0,
-      NotificationItem(
-        id: _nextId++,
-        kind: kind,
-        title: title,
-        body: body,
-        createdAt: now,
-        route: route,
-      ),
+  List<NotificationItem> get items =>
+      List<NotificationItem>.unmodifiable(_items.where(_visible));
+
+  int get unreadCount => _items.where((n) => _visible(n) && !n.read).length;
+
+  // ---------- server (live) ----------
+
+  NotificationItem _fromRow(Map<String, dynamic> r) {
+    return NotificationItem(
+      id: r['id'] as String,
+      kind: notifKindFrom(r['kind'] as String?),
+      title: (r['title'] as String?) ?? '',
+      body: (r['body'] as String?) ?? '',
+      createdAt: DateTime.tryParse((r['created_at'] as String?) ?? '')?.toLocal() ??
+          DateTime.now(),
+      route: r['route'] as String?,
+      read: r['is_read'] == true,
     );
+  }
+
+  Future<void> loadRemote() async {
+    if (!kSupabaseReady) return;
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+    try {
+      final rows = await Supabase.instance.client
+          .from('notifications')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false)
+          .limit(100);
+      final list = (rows as List).cast<Map<String, dynamic>>();
+      _items
+        ..clear()
+        ..addAll(list.map(_fromRow));
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  /// A notification that just arrived from the server.
+  void addRemote(Map<String, dynamic> row) {
+    if (row['id'] == null) return;
+    final item = _fromRow(row);
+    if (_items.any((n) => n.id == item.id)) return;
+    _items.insert(0, item);
     notifyListeners();
   }
 
-  void markRead(int id) {
+  void clear() {
+    _items.clear();
+    notifyListeners();
+  }
+
+  Future<void> _pushRead(String id) async {
+    try {
+      await Supabase.instance.client
+          .from('notifications')
+          .update({'is_read': true}).eq('id', id);
+    } catch (_) {}
+  }
+
+  Future<void> _pushReadAll() async {
+    try {
+      final uid = Supabase.instance.client.auth.currentUser?.id;
+      if (uid == null) return;
+      await Supabase.instance.client
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('user_id', uid)
+          .eq('is_read', false);
+    } catch (_) {}
+  }
+
+  // ---------- reading ----------
+
+  void markRead(String id) {
     for (final n in _items) {
       if (n.id == id && !n.read) {
         n.read = true;
         notifyListeners();
+        if (kSupabaseReady && !id.startsWith('local-')) _pushRead(id);
         return;
       }
     }
@@ -128,10 +181,64 @@ class NotificationStore extends ChangeNotifier {
         changed = true;
       }
     }
-    if (changed) notifyListeners();
+    if (changed) {
+      notifyListeners();
+      if (kSupabaseReady) _pushReadAll();
+    }
+  }
+
+  // ---------- prototype mode ----------
+
+  /// Starts watching the application store (prototype mode only).
+  void ensureStarted() {
+    if (_started || kSupabaseReady) return;
+    _started = true;
+    final app = ApplicationStore.instance;
+    _lastStatus = app.status;
+    _lastSubmitted = app.submittedList.length;
+    _lastAppeal = app.lastAppeal;
+    _lastReplacement = app.replacement;
+    app.addListener(_onAppChanged);
+  }
+
+  /// Re-reads the application store without creating notifications.
+  void rebase() {
+    final app = ApplicationStore.instance;
+    _lastStatus = app.status;
+    _lastSubmitted = app.submittedList.length;
+    _lastAppeal = app.lastAppeal;
+    _lastReplacement = app.replacement;
+  }
+
+  void add({
+    required NotifKind kind,
+    required String title,
+    required String body,
+    String? route,
+  }) {
+    final now = DateTime.now();
+    if (_items.isNotEmpty) {
+      final latest = _items.first;
+      if (latest.title == title && now.difference(latest.createdAt).inSeconds < 3) {
+        return;
+      }
+    }
+    _items.insert(
+      0,
+      NotificationItem(
+        id: 'local-${_nextId++}',
+        kind: kind,
+        title: title,
+        body: body,
+        createdAt: now,
+        route: route,
+      ),
+    );
+    notifyListeners();
   }
 
   void _onAppChanged() {
+    if (muted) return;
     final app = ApplicationStore.instance;
     final s = app.status;
     var handled = false;

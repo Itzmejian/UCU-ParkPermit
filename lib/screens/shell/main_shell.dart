@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
 import '../../models/notification_store.dart';
+
+import '../../services/data_service.dart';
+import '../../widgets/offline_banner.dart';
 import '../../widgets/ucu_logo.dart';
 import '../home/home_tab.dart';
 import '../profile/profile_tab.dart';
@@ -17,8 +20,28 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   late int _index = widget.initialIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      DataService.refresh();
+      NotificationStore.instance.loadRemote();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +80,23 @@ class _MainShellState extends State<MainShell> {
           ],
         ),
         actions: [
+          if (DataService.live)
+            ValueListenableBuilder<bool>(
+              valueListenable: DataService.refreshing,
+              builder: (context, busy, child) {
+                return IconButton(
+                  tooltip: 'Refresh',
+                  icon: busy
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2.2),
+                        )
+                      : const Icon(Icons.refresh_rounded),
+                  onPressed: busy ? null : () => DataService.refresh(),
+                );
+              },
+            ),
           AnimatedBuilder(
             animation: NotificationStore.instance,
             builder: (context, child) {
@@ -77,9 +117,16 @@ class _MainShellState extends State<MainShell> {
           const SizedBox(width: 6),
         ],
       ),
-      body: IndexedStack(
-        index: _index,
-        children: const [HomeTab(), VehiclesTab(), ProfileTab()],
+      body: Column(
+        children: [
+          const OfflineBanner(),
+          Expanded(
+            child: IndexedStack(
+              index: _index,
+              children: const [HomeTab(), VehiclesTab(), ProfileTab()],
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
