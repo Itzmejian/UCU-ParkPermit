@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import '../../models/network_store.dart';
 import 'package:flutter/services.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
+import '../../core/pangasinan_address.dart';
+import '../../core/profile_validators.dart';
 import '../../core/signup_info.dart';
-import '../../models/profile_store.dart';
+import '../../core/ucu_programs.dart';
 import '../../core/validators.dart';
+import '../../models/network_store.dart';
+import '../../models/profile_store.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/app_buttons.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/option_sheet.dart';
+import '../../widgets/search_sheet.dart';
 import '../../widgets/security_footer.dart';
 
 /// Applicants must be at least this old (a driver's license is required).
@@ -44,6 +48,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _idCtrl = TextEditingController();
   final _programCtrl = TextEditingController();
+  final _otherCtrl = TextEditingController();
   final _yearCtrl = TextEditingController();
   final _empTypeCtrl = TextEditingController();
   final _deptCtrl = TextEditingController();
@@ -51,7 +56,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   final _streetCtrl = TextEditingController();
   final _barangayCtrl = TextEditingController();
   final _cityCtrl = TextEditingController();
-  final _provinceCtrl = TextEditingController();
+  final _provinceCtrl = TextEditingController(text: kProvince);
   final _phoneCtrl = TextEditingController();
 
   // Chosen on the Register screen. Defaults to Student if opened directly.
@@ -61,6 +66,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   bool _loading = false;
 
   bool get _isStudent => _role == kRoleStudent;
+  bool get _programIsOther => _programCtrl.text == kOtherProgram;
 
   @override
   void didChangeDependencies() {
@@ -75,17 +81,12 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
   @override
   void dispose() {
-    _idCtrl.dispose();
-    _programCtrl.dispose();
-    _yearCtrl.dispose();
-    _empTypeCtrl.dispose();
-    _deptCtrl.dispose();
-    _birthCtrl.dispose();
-    _streetCtrl.dispose();
-    _barangayCtrl.dispose();
-    _cityCtrl.dispose();
-    _provinceCtrl.dispose();
-    _phoneCtrl.dispose();
+    for (final c in [
+      _idCtrl, _programCtrl, _otherCtrl, _yearCtrl, _empTypeCtrl, _deptCtrl,
+      _birthCtrl, _streetCtrl, _barangayCtrl, _cityCtrl, _provinceCtrl, _phoneCtrl,
+    ]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -125,9 +126,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       options: _yearLevels,
       selected: _yearCtrl.text,
     );
-    if (choice != null) {
-      setState(() => _yearCtrl.text = choice);
-    }
+    if (choice != null) setState(() => _yearCtrl.text = choice);
   }
 
   Future<void> _pickEmployeeType() async {
@@ -138,9 +137,51 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       options: _employeeTypes,
       selected: _empTypeCtrl.text,
     );
-    if (choice != null) {
-      setState(() => _empTypeCtrl.text = choice);
+    if (choice != null) setState(() => _empTypeCtrl.text = choice);
+  }
+
+  Future<void> _pickProgram() async {
+    final choice = await showSearchSheet(
+      context,
+      title: 'Course / Program',
+      options: kUcuProgramOptions,
+      selected: _programCtrl.text,
+      searchHint: 'Search, e.g., BSIT or Nursing',
+    );
+    if (choice != null) setState(() => _programCtrl.text = choice);
+  }
+
+  Future<void> _pickCity() async {
+    final choice = await showSearchSheet(
+      context,
+      title: 'City / Municipality',
+      options: kPangasinanCities,
+      selected: _cityCtrl.text,
+      searchHint: 'Search, e.g., Urdaneta',
+    );
+    if (choice == null || choice == _cityCtrl.text) return;
+    setState(() {
+      _cityCtrl.text = choice;
+      _barangayCtrl.clear();
+    });
+  }
+
+  Future<void> _pickBarangay() async {
+    final city = _cityCtrl.text;
+    if (city.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choose your city or municipality first.')),
+      );
+      return;
     }
+    final choice = await showSearchSheet(
+      context,
+      title: 'Barangay in $city',
+      options: kPangasinanBarangays[city] ?? const <String>[],
+      selected: _barangayCtrl.text,
+      searchHint: 'Search barangay',
+    );
+    if (choice != null) setState(() => _barangayCtrl.text = choice);
   }
 
   String? _validateBirthday(String? value) {
@@ -155,18 +196,20 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (!NetworkStore.instance.ensureOnline(context)) return;
     setState(() => _loading = true);
-    // TODO: save all profile details to the Supabase profile.
+    final program = !_isStudent
+        ? ''
+        : (_programIsOther ? _otherCtrl.text.trim() : _programCtrl.text.trim());
     ProfileStore.instance.setDetails(
       idNumber: _idCtrl.text.trim(),
-      program: _programCtrl.text.trim(),
-      yearLevel: _yearCtrl.text.trim(),
-      employeeType: _empTypeCtrl.text.trim(),
-      department: _deptCtrl.text.trim(),
+      program: program,
+      yearLevel: _isStudent ? _yearCtrl.text.trim() : '',
+      employeeType: _isStudent ? '' : _empTypeCtrl.text.trim(),
+      department: _isStudent ? '' : _deptCtrl.text.trim(),
       birthday: _birthday,
       street: _streetCtrl.text.trim(),
       barangay: _barangayCtrl.text.trim(),
       city: _cityCtrl.text.trim(),
-      province: _provinceCtrl.text.trim(),
+      province: kProvince,
       phone: _phoneCtrl.text.trim(),
     );
     final result = await AuthService.saveProfileDetails();
@@ -178,7 +221,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       );
       return;
     }
-    if (!mounted) return;
     setState(() => _loading = false);
     Navigator.pushNamedAndRemoveUntil(
       context,
@@ -193,25 +235,51 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         const _SectionTitle('Student details'),
         AppTextField(
           label: 'Student ID Number',
-          hint: 'e.g., 2021-10482',
+          hint: 'e.g., 20240001',
           icon: Icons.badge_outlined,
           controller: _idCtrl,
           isRequired: true,
+          keyboardType: TextInputType.number,
           textInputAction: TextInputAction.next,
-          textCapitalization: TextCapitalization.characters,
-          validator: Validators.idNumber,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(8),
+          ],
+          validator: ProfileValidators.studentId,
+        ),
+        const Padding(
+          padding: EdgeInsets.only(top: 6),
+          child: Text(
+            '8 digits. The first 4 are your entry year.',
+            style: TextStyle(fontSize: 12, color: AppColors.textHint),
+          ),
         ),
         const SizedBox(height: 16),
         AppTextField(
           label: 'Course / Program',
-          hint: 'e.g., BS Information Technology',
+          hint: 'Select your course',
           icon: Icons.school_outlined,
           controller: _programCtrl,
           isRequired: true,
-          textInputAction: TextInputAction.next,
-          textCapitalization: TextCapitalization.words,
-          validator: (v) => Validators.required(v, 'Course / Program'),
+          readOnly: true,
+          onTap: _pickProgram,
+          trailingIcon: Icons.keyboard_arrow_down_rounded,
+          validator: (v) =>
+              (v == null || v.isEmpty) ? 'Please choose your course' : null,
         ),
+        if (_programIsOther) ...[
+          const SizedBox(height: 16),
+          AppTextField(
+            label: 'Your Course',
+            hint: 'Type the name of your course',
+            icon: Icons.edit_outlined,
+            controller: _otherCtrl,
+            isRequired: true,
+            textInputAction: TextInputAction.next,
+            textCapitalization: TextCapitalization.words,
+            validator: (v) => Validators.required(v, 'Course name'),
+          ),
+        ],
         const SizedBox(height: 16),
         AppTextField(
           label: 'Year Level',
@@ -356,48 +424,60 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 const SizedBox(height: 8),
                 const _SectionTitle('Home address'),
                 AppTextField(
-                  label: 'Street / Purok',
-                  hint: 'e.g., 123 Rizal Street',
-                  icon: Icons.home_outlined,
-                  controller: _streetCtrl,
+                  label: 'Province',
+                  hint: kProvince,
+                  icon: Icons.map_outlined,
+                  controller: _provinceCtrl,
                   isRequired: true,
-                  textInputAction: TextInputAction.next,
-                  textCapitalization: TextCapitalization.words,
-                  validator: (v) => Validators.required(v, 'Street / Purok'),
+                  readOnly: true,
+                  trailingIcon: Icons.lock_outline,
                 ),
-                const SizedBox(height: 16),
-                AppTextField(
-                  label: 'Barangay',
-                  hint: 'e.g., Poblacion',
-                  icon: Icons.location_on_outlined,
-                  controller: _barangayCtrl,
-                  isRequired: true,
-                  textInputAction: TextInputAction.next,
-                  textCapitalization: TextCapitalization.words,
-                  validator: (v) => Validators.required(v, 'Barangay'),
+                const Padding(
+                  padding: EdgeInsets.only(top: 6),
+                  child: Text(
+                    'Only addresses in Pangasinan are accepted.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textHint),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 AppTextField(
                   label: 'City / Municipality',
-                  hint: 'e.g., Urdaneta City',
+                  hint: 'Select your city or municipality',
                   icon: Icons.location_city_outlined,
                   controller: _cityCtrl,
                   isRequired: true,
-                  textInputAction: TextInputAction.next,
-                  textCapitalization: TextCapitalization.words,
-                  validator: (v) =>
-                      Validators.required(v, 'City / Municipality'),
+                  readOnly: true,
+                  onTap: _pickCity,
+                  trailingIcon: Icons.keyboard_arrow_down_rounded,
+                  validator: (v) => matchPangasinanCity(v ?? '') == null
+                      ? 'Please choose your city or municipality'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 AppTextField(
-                  label: 'Province',
-                  hint: 'e.g., Pangasinan',
-                  icon: Icons.map_outlined,
-                  controller: _provinceCtrl,
+                  label: 'Barangay',
+                  hint: _cityCtrl.text.isEmpty
+                      ? 'Choose your city first'
+                      : 'Select your barangay',
+                  icon: Icons.location_on_outlined,
+                  controller: _barangayCtrl,
                   isRequired: true,
+                  readOnly: true,
+                  onTap: _pickBarangay,
+                  trailingIcon: Icons.keyboard_arrow_down_rounded,
+                  validator: (v) =>
+                      matchPangasinanBarangay(_cityCtrl.text, v ?? '') == null
+                          ? 'Please choose your barangay'
+                          : null,
+                ),
+                const SizedBox(height: 16),
+                AppTextField(
+                  label: 'Street / Purok (optional)',
+                  hint: 'e.g., 123 Rizal Street or Purok 3',
+                  icon: Icons.home_outlined,
+                  controller: _streetCtrl,
                   textInputAction: TextInputAction.next,
                   textCapitalization: TextCapitalization.words,
-                  validator: (v) => Validators.required(v, 'Province'),
                 ),
                 const SizedBox(height: 8),
                 const _SectionTitle('Contact'),
