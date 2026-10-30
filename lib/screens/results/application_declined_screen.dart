@@ -7,6 +7,7 @@ import '../../widgets/app_buttons.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/notice_app_bar.dart';
 import '../../widgets/status_badge.dart';
+import '../../widgets/appeal_window.dart';
 import '../home/home_cards.dart';
 
 class ApplicationDeclinedScreen extends StatelessWidget {
@@ -83,9 +84,9 @@ class ApplicationDeclinedScreen extends StatelessWidget {
               const SizedBox(height: 12),
               DeclinedDetailsCard(app: app),
               const SizedBox(height: 22),
-              PrimaryButton(
+              AppealButton(
+                referenceNo: app.referenceNo,
                 label: 'File an Appeal & Resubmit Docs',
-                showArrow: true,
                 onPressed: () => Navigator.pushNamed(context, AppRoutes.appeal),
               ),
               const SizedBox(height: 10),

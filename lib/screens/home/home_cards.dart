@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/appeal_window.dart';
 import '../../core/app_colors.dart';
 import '../../models/mock_application.dart';
 import '../../widgets/app_card.dart';
@@ -555,42 +556,7 @@ class DeclinedDetailsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.goldLight,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.gold),
-            ),
-            child: const Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.timer_outlined, size: 18, color: AppColors.goldDark),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text.rich(
-                    TextSpan(
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        height: 1.4,
-                        color: AppColors.goldDark,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: 'Appeal window active: 7 days remaining',
-                          style: TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        TextSpan(
-                          text: ' to file an appeal or resubmit documents.',
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          AppealWindowNotice(referenceNo: app.referenceNo),
         ],
       ),
     );

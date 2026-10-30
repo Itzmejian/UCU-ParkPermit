@@ -9,6 +9,7 @@ import '../../models/profile_store.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/app_buttons.dart';
 import '../../widgets/status_badge.dart';
+import '../../widgets/appeal_window.dart';
 import 'home_cards.dart';
 
 /// The Home tab shows only what the applicant needs right now: the status of
@@ -184,9 +185,9 @@ class _HomeTabState extends State<HomeTab> {
           const SizedBox(height: 12),
           DeclinedDetailsCard(app: app),
           const SizedBox(height: 16),
-          PrimaryButton(
+          AppealButton(
+            referenceNo: app.referenceNo,
             label: 'File an Appeal',
-            showArrow: true,
             onPressed: () => _go(AppRoutes.appeal),
           ),
         ],
