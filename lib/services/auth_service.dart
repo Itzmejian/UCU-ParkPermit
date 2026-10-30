@@ -148,6 +148,14 @@ class AuthService {
 
   // ---------- sign in and out ----------
 
+static Future<bool> _isGuardAccount() async {
+    try {
+      return await _client.rpc('is_guard') == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<AuthResult> signIn(String email, String password) async {
     if (!live) {
       await _fake();
@@ -160,6 +168,14 @@ class AuthService {
       );
       if (res.session == null) {
         return const AuthResult.failure('Could not log in. Please try again.');
+      }
+      if (await _isGuardAccount()) {
+        try {
+          await _client.auth.signOut();
+        } catch (_) {}
+        return const AuthResult.failure(
+          'This is a security guard account. Tap the "i" on the first screen to use Guard Login.',
+        );
       }
       await loadProfile();
       return const AuthResult.success();

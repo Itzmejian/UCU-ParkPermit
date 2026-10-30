@@ -3,6 +3,7 @@ import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
 import '../../widgets/app_buttons.dart';
 import '../../widgets/ucu_logo.dart';
+import '../guard/guard_login_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -10,6 +11,23 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Security guard',
+            icon: const Icon(Icons.info_outline, color: AppColors.navy),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const GuardLoginScreen()),
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
