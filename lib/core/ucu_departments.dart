@@ -1,7 +1,6 @@
 // Colleges and offices of Urdaneta City University, for the employee
 // Department / Office dropdown.
-// TO CONFIRM: only CTE and the Graduate School (IGAS) were confirmed from
-// ucu.edu.ph. Check the rest with the university and edit this file.
+// Colleges: official list from UCU. Offices: draft, confirm with the university.
 
 const String kOtherDepartment = 'Other (type it)';
 
@@ -10,21 +9,21 @@ const String kFacultyType = 'Instructor / Faculty';
 
 /// For instructors and faculty. The short name is saved.
 const Map<String, String> kUcuColleges = {
-  'CTE': 'College of Teacher Education',
-  'IGAS': 'Institute of Graduate and Advanced Studies (Graduate School)',
-  'CBA': 'College of Business and Accountancy',
-  'CAS': 'College of Arts and Sciences',
-  'CON': 'College of Nursing',
-  'COM': 'College of Midwifery',
-  'COP': 'College of Pharmacy',
-  'CHTM': 'College of Hospitality and Tourism Management',
-  'CEA': 'College of Engineering and Architecture',
-  'CCS': 'College of Computer Studies',
-  'CCJE': 'College of Criminal Justice Education',
   'COL': 'College of Law',
+  'COP': 'College of Pharmacy',
+  'CHS': 'College of Health Sciences',
+  'CAS': 'College of Arts and Sciences',
+  'CCJE': 'College of Criminal Justice Education',
+  'CTE': 'College of Teacher Education',
+  'CHUS': 'College of Human Sciences',
+  'CEA': 'College of Engineering and Architecture',
+  'CBMA': 'College of Business Management and Accountancy',
+  'CITE': 'College of Information and Technology Education',
+  'CHTM': 'College of Hospitality and Tourism Management',
+  'GS': 'Graduate School',
 };
 
-/// For staff. The full name is saved.
+/// For staff. The full name is saved. DRAFT: confirm with the university.
 const List<String> kUcuOffices = [
   'Office of the President',
   'Office of the Vice President for Academic Affairs',
