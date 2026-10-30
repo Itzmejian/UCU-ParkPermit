@@ -79,6 +79,36 @@ class _StepVehicleDetailsState extends State<StepVehicleDetails> {
     if (_formKey.currentState!.validate()) widget.onNext();
   }
 
+/// ML Kit reads a form column by column (all labels, then all values).
+  /// This puts text on the same row back together, left to right, so
+  /// "MAKE/BRAND:" and "TOYOTA" become one line again.
+  List<String> _rowsFrom(RecognizedText result) {
+    final items = <TextLine>[
+      for (final block in result.blocks) ...block.lines,
+    ];
+    items.sort((a, b) =>
+        a.boundingBox.center.dy.compareTo(b.boundingBox.center.dy));
+    final rows = <List<TextLine>>[];
+    for (final line in items) {
+      final box = line.boundingBox;
+      if (rows.isNotEmpty) {
+        final ref = rows.last.first.boundingBox;
+        final h = box.height < ref.height ? box.height : ref.height;
+        if ((box.center.dy - ref.center.dy).abs() < h * 0.6) {
+          rows.last.add(line);
+          continue;
+        }
+      }
+      rows.add([line]);
+    }
+    return [
+      for (final r in rows)
+        (r..sort((a, b) => a.boundingBox.left.compareTo(b.boundingBox.left)))
+            .map((l) => l.text)
+            .join(' '),
+    ];
+  }
+
   /// Takes or picks a photo of the OR/CR, reads it on the phone and fills in
   /// what it found. Nothing is sent to the internet for this.
   Future<void> _scan(ImageSource source) async {
@@ -110,10 +140,7 @@ class _StepVehicleDetailsState extends State<StepVehicleDetails> {
     try {
       final result =
           await recognizer.processImage(InputImage.fromFilePath(photo.path));
-      lines = [
-        for (final block in result.blocks)
-          for (final line in block.lines) line.text,
-      ];
+      lines = _rowsFrom(result);
     } catch (_) {
       lines = <String>[];
     } finally {

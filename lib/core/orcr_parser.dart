@@ -57,11 +57,19 @@ String? _afterLabel(
       if (rest.length >= 2) return rest;
       if (i + 1 < lines.length) {
         final next = lines[i + 1].trim();
-        if (next.length >= 2) return next;
+        if (next.length >= 2 && !_looksLikeLabel(next)) return next;
       }
     }
   }
   return null;
+}
+
+/// True when the text is a field label (e.g. "SERIES:"), not a value.
+bool _looksLikeLabel(String s) {
+  if (s.endsWith(':')) return true;
+  return RegExp(
+    r'^(MV FILE|PLATE|MAKE|BRAND|SERIES|MODEL|BODY|COLOR|YEAR|ENGINE|CHASSIS|OWNER|ADDRESS|FUEL|GROSS|NET)',
+  ).hasMatch(s);
 }
 
 String? _plateFrom(String text) {
