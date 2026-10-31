@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/permissions.dart';
 import '../core/supabase_config.dart';
 import '../models/notification_store.dart';
 import 'data_service.dart';
@@ -21,6 +22,7 @@ class RealtimeService {
   }
 
   static void start() {
+    requestNotificationPermission();
     if (!kSupabaseReady) return;
     final client = Supabase.instance.client;
     final uid = client.auth.currentUser?.id;

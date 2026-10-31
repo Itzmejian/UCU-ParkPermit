@@ -7,6 +7,7 @@ import '../../core/app_colors.dart';
 import '../../core/app_limits.dart';
 import '../../core/doc_picker.dart';
 import '../../core/orcr_parser.dart';
+import '../../core/permissions.dart';
 import '../../core/vehicle_validators.dart';
 import '../../models/application_draft.dart';
 import '../../widgets/app_text_field.dart';
@@ -113,6 +114,7 @@ class _StepVehicleDetailsState extends State<StepVehicleDetails> {
   /// what it found. Nothing is sent to the internet for this.
   Future<void> _scan(ImageSource source) async {
     FocusScope.of(context).unfocus();
+    if (source == ImageSource.camera && !await ensureCameraPermission(context)) return;
     XFile? photo;
     try {
       photo = await ImagePicker().pickImage(

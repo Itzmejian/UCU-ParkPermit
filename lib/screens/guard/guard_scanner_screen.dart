@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
+import '../../core/permissions.dart';
 import '../../services/guard_service.dart';
 import 'guard_result_screen.dart';
 
@@ -19,11 +20,13 @@ class _GuardScannerScreenState extends State<GuardScannerScreen> {
   );
   final TextEditingController _manual = TextEditingController();
   bool _busy = false;
+  bool? _cameraOk;
   String _guardName = '';
 
   @override
   void initState() {
     super.initState();
+    _checkCamera();
     GuardService.guardName().then((n) {
       if (mounted) setState(() => _guardName = n);
     });
@@ -34,6 +37,11 @@ class _GuardScannerScreenState extends State<GuardScannerScreen> {
     _scanner.dispose();
     _manual.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkCamera() async {
+    final ok = await ensureCameraPermission(context);
+    if (mounted) setState(() => _cameraOk = ok);
   }
 
   Future<void> _check(String code) async {
@@ -123,7 +131,38 @@ class _GuardScannerScreenState extends State<GuardScannerScreen> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      MobileScanner(controller: _scanner, onDetect: _onDetect),
+                      if (_cameraOk == true)
+                        MobileScanner(controller: _scanner, onDetect: _onDetect)
+                      else
+                        Container(
+                          color: Colors.black87,
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.no_photography_outlined, size: 48, color: Colors.white70),
+                              const SizedBox(height: 12),
+                              Text(
+                                _cameraOk == null
+                                    ? 'Starting the camera...'
+                                    : 'Camera access is needed to scan stickers. You can still type the permit number or plate below.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              if (_cameraOk == false) ...[
+                                const SizedBox(height: 12),
+                                OutlinedButton(
+                                  onPressed: _checkCamera,
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    side: const BorderSide(color: Colors.white70),
+                                  ),
+                                  child: const Text('Allow camera'),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       Center(
                         child: Container(
                           width: 230,

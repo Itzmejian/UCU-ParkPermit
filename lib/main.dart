@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_routes.dart';
 import 'core/app_theme.dart';
@@ -8,10 +9,15 @@ import 'models/notification_store.dart';
 import 'models/profile_store.dart';
 import 'screens/guard/guard_scanner_screen.dart';
 import 'services/auth_service.dart';
+import 'widgets/responsive_frame.dart';
 import 'services/guard_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   var initialRoute = AppRoutes.welcome;
   if (kSupabaseReady) {
@@ -45,6 +51,7 @@ class ParkPermitApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       initialRoute: initialRoute,
+      builder: (context, child) => ResponsiveFrame(child: child ?? const SizedBox.shrink()),
       onGenerateRoute: (settings) {
         if (settings.name == kGuardRoute) {
           return MaterialPageRoute(builder: (_) => const GuardScannerScreen(), settings: settings);
