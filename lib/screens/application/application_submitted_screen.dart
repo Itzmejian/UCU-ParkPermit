@@ -124,7 +124,7 @@ class ApplicationSubmittedScreen extends StatelessWidget {
                     const _InfoRow(
                       icon: Icons.schedule,
                       title: 'Estimated review time',
-                      body: '24 to 48 business hours by the Campus Safety and Security Office.',
+                      body: '24 to 48 office hours by the Campus Safety and Security Office.',
                     ),
                     const SizedBox(height: 14),
                     const _InfoRow(

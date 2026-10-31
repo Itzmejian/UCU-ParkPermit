@@ -64,7 +64,10 @@ class _AppTextFieldState extends State<AppTextField> {
 
   Widget _prefix() {
     if (widget.prefixLabel == null) {
-      return Icon(widget.icon, size: 20, color: AppColors.textHint);
+      return Padding(
+        padding: const EdgeInsets.only(left: 16, right: 12),
+        child: Icon(widget.icon, size: 20, color: AppColors.textHint),
+      );
     }
     return Padding(
       padding: const EdgeInsets.only(left: 14, right: 10),
@@ -145,7 +148,7 @@ class _AppTextFieldState extends State<AppTextField> {
           autovalidateMode: AutovalidateMode.onUserInteraction,
           style: const TextStyle(fontSize: 15, color: AppColors.textDark),
           decoration: InputDecoration(
-            hintText: widget.hint,
+            hintText: widget.label.replaceAll(' (optional)', ''),
             hintStyle: const TextStyle(fontSize: 14, color: AppColors.textHint),
             prefixIcon: _prefix(),
             prefixIconConstraints:

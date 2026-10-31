@@ -148,7 +148,7 @@ class PermitRequirementsScreen extends StatelessWidget {
                   _caption('GOOD TO KNOW'),
                   const SizedBox(height: 6),
                   _point('You can register up to $kMaxVehicles vehicles. A pending application counts as one.'),
-                  _point('The review takes about 24 to 48 business hours.'),
+                  _point('The review takes about 24 to 48 office hours.'),
                   _point('If your application is declined, you have 7 days to appeal.'),
                   _point('Your permit number is printed on the sticker. The guard checks the sticker at the gate.'),
                   _point('Renew your permit before it expires so you can keep parking on campus.'),

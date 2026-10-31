@@ -168,7 +168,7 @@ class AppealSubmittedScreen extends StatelessWidget {
                     _row('Assigned to', 'Campus Security Office'),
                     _row(
                       'Expected time',
-                      '24 to 48 business hours',
+                      '24 to 48 office hours',
                       color: AppColors.goldDark,
                       last: true,
                     ),

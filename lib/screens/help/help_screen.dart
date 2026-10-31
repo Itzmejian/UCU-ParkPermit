@@ -34,7 +34,7 @@ const List<_Faq> _faqs = [
   _Faq(
     'Permits',
     'How long does the review take?',
-    'The Security Office usually reviews an application within 24 to 48 business hours. You will get a notification in the bell when something changes.',
+    'The Security Office usually reviews an application within 24 to 48 office hours. You will get a notification in the bell when something changes.',
   ),
   _Faq(
     'Permits',
