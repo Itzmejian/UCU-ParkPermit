@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
 import '../../models/application_store.dart';
+import '../../services/receipt_service.dart';
 import '../../widgets/app_buttons.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/ucu_logo.dart';
@@ -137,7 +138,22 @@ class ApplicationSubmittedScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
+              OutlinedButton.icon(
+                onPressed: () => printReceipt(context, ref),
+                icon: const Icon(Icons.print_outlined),
+                label: const Text(
+                  'Download or Print Receipt',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  foregroundColor: AppColors.navy,
+                  side: const BorderSide(color: AppColors.navy, width: 1.2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 12),
               PrimaryButton(
                 label: 'Back to Home',
                 showArrow: true,
