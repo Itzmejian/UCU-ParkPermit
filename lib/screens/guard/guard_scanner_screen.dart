@@ -4,6 +4,7 @@ import '../../core/app_colors.dart';
 import '../../core/app_routes.dart';
 import '../../core/permissions.dart';
 import '../../services/guard_service.dart';
+import 'guard_help_screen.dart';
 import 'guard_result_screen.dart';
 
 const Color _navyDark = Color(0xFF0F2552);
@@ -179,6 +180,14 @@ class _GuardScannerScreenState extends State<GuardScannerScreen> with SingleTick
                           ],
                         ),
                       ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Help',
+                    icon: const Icon(Icons.help_outline, color: Colors.white),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const GuardHelpScreen()),
                     ),
                   ),
                   IconButton(

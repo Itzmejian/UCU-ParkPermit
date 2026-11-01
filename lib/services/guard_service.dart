@@ -67,6 +67,44 @@ class GuardService {
     }
   }
 
+/// Sends a message to the Security Office. Returns the ticket number.
+  static Future<({String? ticket, String? error})> sendMessage(
+    String topic,
+    String subject,
+    String message,
+  ) async {
+    try {
+      final r = await _c.rpc('create_support_ticket', params: {
+        'p_topic': 'Guard: $topic',
+        'p_subject': subject,
+        'p_message': message,
+      });
+      return (ticket: r?.toString(), error: null);
+    } catch (e) {
+      final m = e is PostgrestException ? e.message : e.toString();
+      if (m.contains('TOO_MANY')) {
+        return (ticket: null, error: 'You sent many messages in the last hour. Please wait a while.');
+      }
+      if (m.contains('BAD_INPUT')) {
+        return (ticket: null, error: 'Write a subject (at least 5 characters) and a message (at least 10).');
+      }
+      return (ticket: null, error: friendly(e));
+    }
+  }
+
+  /// This guard's messages and the Security Office replies, newest first.
+  static Future<List<Map<String, dynamic>>> myMessages() async {
+    final uid = _c.auth.currentUser?.id;
+    if (uid == null) return [];
+    final rows = await _c
+        .from('support_tickets')
+        .select('ticket_no, topic, subject, message, status, reply, replied_at, created_at')
+        .eq('user_id', uid)
+        .order('created_at', ascending: false)
+        .limit(30);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
   /// Checks a sticker. [code] is the scanned QR text, a permit number or a plate.
   static Future<Map<String, dynamic>> verify(String code) async {
     final r = await _c.rpc('guard_verify', params: {'p_code': code});

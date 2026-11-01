@@ -3,6 +3,7 @@ import '../../core/app_colors.dart';
 import '../../services/guard_service.dart';
 import '../../widgets/app_buttons.dart';
 import '../../widgets/app_text_field.dart';
+import 'guard_help_screen.dart';
 
 const Color _navyDark = Color(0xFF0F2552);
 
@@ -155,6 +156,17 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
                     showArrow: true,
                     isLoading: _loading,
                     onPressed: _login,
+                  ),
+                  const SizedBox(height: 6),
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const GuardHelpScreen(loggedIn: false)),
+                      ),
+                      icon: const Icon(Icons.help_outline, size: 18),
+                      label: const Text('Need help? Guard FAQ'),
+                    ),
                   ),
                   const SizedBox(height: 22),
                   Container(
