@@ -70,6 +70,7 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 dependency_overrides:
+  image: 4.5.4
   permission_handler_android: 13.0.1
 
   # To add assets to your application, add an assets section, like this:
