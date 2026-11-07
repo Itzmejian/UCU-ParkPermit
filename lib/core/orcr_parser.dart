@@ -82,7 +82,12 @@ String? _plateFrom(String text) {
 
 OrcrResult parseOrcr(List<String> rawLines) {
   final lines = [
-    for (final l in rawLines) l.toUpperCase().replaceAll(RegExp(r'\s+'), ' ').trim(),
+    for (final l in rawLines)
+      l
+          .toUpperCase()
+          .replaceAll(RegExp(r'\b(SAMPLE|ONLY)\b'), ' ')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim(),
   ]..removeWhere((l) => l.isEmpty);
   if (lines.isEmpty) return const OrcrResult();
 
