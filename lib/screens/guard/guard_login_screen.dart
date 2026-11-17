@@ -3,6 +3,7 @@ import '../../core/app_colors.dart';
 import '../../services/guard_service.dart';
 import '../../widgets/app_buttons.dart';
 import '../../widgets/app_text_field.dart';
+import 'guard_forgot_password.dart';
 import 'guard_help_screen.dart';
 
 const Color _navyDark = Color(0xFF0F2552);
@@ -158,6 +159,24 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
                     onPressed: _login,
                   ),
                   const SizedBox(height: 6),
+                  const SizedBox(height: 4),
+                  OutlinedButton.icon(
+                    onPressed: () => showGuardForgotDialog(context, email: _email.text.trim(), activate: true),
+                    icon: const Icon(Icons.mark_email_read_outlined, size: 20),
+                    label: const Text('Activate my guard account'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.navy,
+                      minimumSize: const Size.fromHeight(48),
+                      side: const BorderSide(color: AppColors.navy),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => showGuardForgotDialog(context, email: _email.text.trim()),
+                      child: const Text('Forgot password?'),
+                    ),
+                  ),
                   Center(
                     child: TextButton.icon(
                       onPressed: () => Navigator.push(
