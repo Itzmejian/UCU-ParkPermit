@@ -62,6 +62,24 @@ class GuardService {
     return Map<String, dynamic>.from(r as Map);
   }
 
+  /// Saves the guard's own corrections. Keys: first_name, middle_name,
+  /// last_name, suffix, phone (09XXXXXXXXX), birthdate (YYYY-MM-DD), sex,
+  /// street, barangay, city. The Security Office sees the change.
+  static Future<void> updateMyProfile(Map<String, String> d) async {
+    await _c.rpc('guard_update_my_profile', params: {
+      'p_first': d['first_name'] ?? '',
+      'p_middle': d['middle_name'] ?? '',
+      'p_last': d['last_name'] ?? '',
+      'p_suffix': d['suffix'] ?? '',
+      'p_phone': d['phone'] ?? '',
+      'p_birthdate': (d['birthdate'] ?? '').isEmpty ? null : d['birthdate'],
+      'p_sex': d['sex'] ?? '',
+      'p_street': d['street'] ?? '',
+      'p_barangay': d['barangay'] ?? '',
+      'p_city': d['city'] ?? '',
+    });
+  }
+
   /// Records that the guard finished creating the account.
   static Future<void> markActivated() async {
     await _c.rpc('guard_mark_activated');
