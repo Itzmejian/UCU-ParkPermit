@@ -3,6 +3,7 @@ import '../../core/app_colors.dart';
 import '../../services/guard_service.dart';
 import '../../widgets/app_buttons.dart';
 import '../../widgets/app_text_field.dart';
+import 'guard_create_account_screen.dart';
 import 'guard_forgot_password.dart';
 import 'guard_help_screen.dart';
 
@@ -48,6 +49,22 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
       return;
     }
     Navigator.pushNamedAndRemoveUntil(context, kGuardRoute, (route) => false);
+  }
+
+  Future<void> _createAccount() async {
+    final email = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => GuardCreateAccountScreen(email: _email.text.trim())),
+    );
+    if (email == null || !mounted) return;
+    setState(() {
+      _email.text = email;
+      _password.clear();
+      _error = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Account created. Log in with your email and new password.')),
+    );
   }
 
   @override
@@ -161,9 +178,9 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
                   const SizedBox(height: 6),
                   const SizedBox(height: 4),
                   OutlinedButton.icon(
-                    onPressed: () => showGuardForgotDialog(context, email: _email.text.trim(), activate: true),
-                    icon: const Icon(Icons.mark_email_read_outlined, size: 20),
-                    label: const Text('Activate my guard account'),
+                    onPressed: _createAccount,
+                    icon: const Icon(Icons.person_add_alt_1_outlined, size: 20),
+                    label: const Text('Create guard account (I have a code)'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.navy,
                       minimumSize: const Size.fromHeight(48),

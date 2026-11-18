@@ -5,7 +5,7 @@ import '../core/supabase_config.dart';
 const String kGuardRoute = '/guard';
 
 /// Security guards: log in, check a sticker, and see the owner's ID photo.
-/// Guard accounts are added by the developer in Supabase (public.guards).
+/// Guard accounts are invited by the Security Office from the admin website.
 class GuardService {
   GuardService._();
 
@@ -54,6 +54,17 @@ class GuardService {
     try {
       await _c.auth.signOut();
     } catch (_) {}
+  }
+
+  /// The details the Security Office entered for this guard.
+  static Future<Map<String, dynamic>> myProfile() async {
+    final r = await _c.rpc('guard_my_profile');
+    return Map<String, dynamic>.from(r as Map);
+  }
+
+  /// Records that the guard finished creating the account.
+  static Future<void> markActivated() async {
+    await _c.rpc('guard_mark_activated');
   }
 
   static Future<String> guardName() async {
