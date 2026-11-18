@@ -226,6 +226,22 @@ class _GuardCreateAccountScreenState extends State<GuardCreateAccountScreen> {
     );
   }
 
+  static const _months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+
+  String _birthday(dynamic v) {
+    final d = DateTime.tryParse((v ?? '').toString());
+    if (d == null) return '';
+    return '${_months[d.month - 1]} ${d.day}, ${d.year}';
+  }
+
+  String _address() => [_profile['address'], _profile['city'], _profile['province']]
+      .map((e) => (e ?? '').toString().trim())
+      .where((e) => e.isNotEmpty)
+      .join(', ');
+
   Widget _detailRow(IconData icon, String label, dynamic value) {
     final v = (value ?? '').toString().trim();
     return Padding(
@@ -345,11 +361,11 @@ class _GuardCreateAccountScreenState extends State<GuardCreateAccountScreen> {
                 children: [
                   _detailRow(Icons.person_outline, 'Full name', _profile['full_name']),
                   _detailRow(Icons.mail_outline, 'Email', _profile['email']),
-                  _detailRow(Icons.badge_outlined, 'Guard ID no.', _profile['id_no']),
+                  _detailRow(Icons.badge_outlined, 'Guard ID', _profile['id_no']),
                   _detailRow(Icons.phone_outlined, 'Mobile number', _profile['phone']),
-                  _detailRow(Icons.location_on_outlined, 'Assigned post / gate', _profile['post']),
-                  _detailRow(Icons.schedule, 'Shift', _profile['shift']),
-                  _detailRow(Icons.home_outlined, 'Home address', _profile['address']),
+                  _detailRow(Icons.cake_outlined, 'Birthday', _birthday(_profile['birthdate'])),
+                  _detailRow(Icons.wc_outlined, 'Sex', _profile['sex']),
+                  _detailRow(Icons.home_outlined, 'Home address', _address()),
                 ],
               ),
             ),
