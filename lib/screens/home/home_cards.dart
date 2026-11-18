@@ -160,7 +160,11 @@ class StatusSummaryCard extends StatelessWidget {
     required this.tone,
     required this.message,
     this.reference,
+    this.footer,
   });
+
+  /// Extra content shown inside the same card, below a divider.
+  final Widget? footer;
 
   final IconData icon;
   final String title;
@@ -262,6 +266,12 @@ class StatusSummaryCard extends StatelessWidget {
                 ],
               ),
             ),
+          ],
+          if (footer != null) ...[
+            const SizedBox(height: 14),
+            Divider(height: 1, color: _accent.withValues(alpha: 0.5)),
+            const SizedBox(height: 14),
+            footer!,
           ],
         ],
       ),
@@ -472,15 +482,16 @@ class _DetailRow extends StatelessWidget {
 }
 
 class DeclinedDetailsCard extends StatelessWidget {
-  const DeclinedDetailsCard({super.key, required this.app});
+  const DeclinedDetailsCard({super.key, required this.app, this.embedded = false});
 
   final MockApplication app;
 
+  /// True when shown inside another card (no card of its own).
+  final bool embedded;
+
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      borderColor: const Color(0xFFF2B8B8),
-      child: Column(
+    final body = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Row(
@@ -558,8 +569,9 @@ class DeclinedDetailsCard extends StatelessWidget {
           const SizedBox(height: 12),
           AppealWindowNotice(referenceNo: app.referenceNo),
         ],
-      ),
-    );
+      );
+    if (embedded) return body;
+    return AppCard(borderColor: const Color(0xFFF2B8B8), child: body);
   }
 }
 

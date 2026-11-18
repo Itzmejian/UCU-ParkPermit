@@ -4,7 +4,6 @@ import '../../core/app_routes.dart';
 import '../../core/office_info.dart';
 import '../../widgets/app_buttons.dart';
 import '../../widgets/app_card.dart';
-import '../../widgets/state_views.dart';
 import '../../widgets/status_badge.dart';
 import '../home/home_cards.dart';
 
@@ -111,33 +110,11 @@ class HelpScreen extends StatefulWidget {
 }
 
 class _HelpScreenState extends State<HelpScreen> {
-  final TextEditingController _search = TextEditingController();
   String _category = 'All';
+  _Faq? _selected;
 
-  @override
-  void initState() {
-    super.initState();
-    _search.addListener(() {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
-  }
-
-  List<_Faq> get _filtered {
-    final q = _search.text.trim().toLowerCase();
-    return _faqs.where((f) {
-      final okCategory = _category == 'All' || f.category == _category;
-      final okQuery = q.isEmpty ||
-          f.question.toLowerCase().contains(q) ||
-          f.answer.toLowerCase().contains(q);
-      return okCategory && okQuery;
-    }).toList();
-  }
+  List<_Faq> get _filtered =>
+      _faqs.where((f) => _category == 'All' || f.category == _category).toList();
 
   OutlineInputBorder _border(Color color, [double width = 1]) {
     return OutlineInputBorder(
@@ -157,7 +134,12 @@ class _HelpScreenState extends State<HelpScreen> {
         ),
         child: InkWell(
           customBorder: const StadiumBorder(),
-          onTap: () => setState(() => _category = label),
+          onTap: () => setState(() {
+            _category = label;
+            if (_selected != null && label != 'All' && _selected!.category != label) {
+              _selected = null;
+            }
+          }),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             child: Text(
@@ -174,44 +156,123 @@ class _HelpScreenState extends State<HelpScreen> {
     );
   }
 
-  Widget _faqTile(_Faq f) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          key: PageStorageKey<String>(f.question),
-          tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-          expandedCrossAxisAlignment: CrossAxisAlignment.start,
-          iconColor: AppColors.navy,
-          collapsedIconColor: AppColors.textHint,
-          shape: const Border(),
-          collapsedShape: const Border(),
-          title: Text(
-            f.question,
-            style: const TextStyle(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textDark,
+  /// The FAQ as one drop-down list: choose a question, the answer shows below.
+  Widget _faqPicker(List<_Faq> results) {
+    final value = results.contains(_selected) ? _selected : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InputDecorator(
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.inputFill,
+            prefixIcon: const Icon(Icons.help_outline, color: AppColors.navy),
+            contentPadding: const EdgeInsets.fromLTRB(0, 4, 8, 4),
+            border: _border(AppColors.border),
+            enabledBorder: _border(AppColors.border),
+            focusedBorder: _border(AppColors.navy, 1.8),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<_Faq>(
+              value: value,
+              isExpanded: true,
+              itemHeight: null,
+              menuMaxHeight: 420,
+              borderRadius: BorderRadius.circular(14),
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.navy),
+              hint: const Text(
+                'Choose a question',
+                style: TextStyle(fontSize: 14.5, color: AppColors.textHint),
+              ),
+              selectedItemBuilder: (context) => [
+                for (final f in results)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      f.question,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                  ),
+              ],
+              items: [
+                for (final f in results)
+                  DropdownMenuItem<_Faq>(
+                    value: f,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Text(
+                        f.question,
+                        style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+                      ),
+                    ),
+                  ),
+              ],
+              onChanged: (f) => setState(() => _selected = f),
             ),
           ),
-          children: [
-            Text(
-              f.answer,
-              style: const TextStyle(fontSize: 13.5, height: 1.5, color: AppColors.textMuted),
-            ),
-            const SizedBox(height: 10),
-            StatusBadge(text: f.category.toUpperCase(), tone: BadgeTone.gray),
-          ],
         ),
-      ),
+        const SizedBox(height: 12),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: value == null
+              ? Container(
+                  key: const ValueKey('none'),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.touch_app_outlined, color: AppColors.textHint),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Pick a question from the list to see the answer.',
+                          style: TextStyle(fontSize: 13.5, color: AppColors.textMuted),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Container(
+                  key: ValueKey(value.question),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.navy.withValues(alpha: 0.35)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        value.question,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.navy,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        value.answer,
+                        style: const TextStyle(fontSize: 13.5, height: 1.5, color: AppColors.textMuted),
+                      ),
+                      const SizedBox(height: 10),
+                      StatusBadge(text: value.category.toUpperCase(), tone: BadgeTone.gray),
+                    ],
+                  ),
+                ),
+        ),
+      ],
     );
   }
 
@@ -268,35 +329,6 @@ class _HelpScreenState extends State<HelpScreen> {
             const SizedBox(height: 14),
             const HowToCard(),
             const SizedBox(height: 14),
-            TextField(
-              controller: _search,
-              textInputAction: TextInputAction.search,
-              style: const TextStyle(fontSize: 14.5, color: AppColors.textDark),
-              decoration: InputDecoration(
-                hintText: 'Search help topics',
-                hintStyle: const TextStyle(fontSize: 14, color: AppColors.textHint),
-                prefixIcon: const Icon(Icons.search, color: AppColors.textHint),
-                suffixIcon: _search.text.isEmpty
-                    ? null
-                    : IconButton(
-                        tooltip: 'Clear',
-                        icon: const Icon(Icons.close, size: 20, color: AppColors.textHint),
-                        onPressed: _search.clear,
-                      ),
-                filled: true,
-                fillColor: AppColors.inputFill,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                border: _border(AppColors.border),
-                enabledBorder: _border(AppColors.border),
-                focusedBorder: _border(AppColors.navy, 1.8),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(children: [for (final c in _categories) _chip(c)]),
-            ),
-            const SizedBox(height: 16),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,16 +413,13 @@ class _HelpScreenState extends State<HelpScreen> {
               ],
             ),
             const SizedBox(height: 10),
-            if (results.isEmpty)
-              const SizedBox(
-                height: 260,
-                child: EmptyState(
-                  icon: Icons.search_off_outlined,
-                  title: 'No results',
-                  message: 'Try a different word, or send us a message with Contact Support.',
-                ),
-              ),
-            for (final f in results) _faqTile(f),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [for (final c in _categories) _chip(c)]),
+            ),
+            const SizedBox(height: 12),
+            _faqPicker(results),
+            const SizedBox(height: 10),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(16),

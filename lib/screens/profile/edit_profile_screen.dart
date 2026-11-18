@@ -194,14 +194,51 @@ Future<void> _pickDepartment() async {
     if (choice != null) setState(() => _barangay.text = choice);
   }
 
+  /// What the user changed: label, old value, new value.
+  List<(String, String, String)> _changes(String program) {
+    final p = ProfileStore.instance;
+    final rows = <(String, String, String)>[
+      ('Full name', p.fullName, _name.text.trim()),
+      ('Mobile number', p.phone.isEmpty ? '' : '+63 ${p.phone}', _phone.text.trim().isEmpty ? '' : '+63 ${_phone.text.trim()}'),
+      if (p.isStudent) ...[
+        ('Course / Program', p.program, program),
+        ('Year level', p.yearLevel, _year.text.trim()),
+      ] else ...[
+        ('Employee type', p.employeeType, _empType.text.trim()),
+        ('Department / Office', p.department, _deptValue),
+      ],
+      ('City / Municipality', p.city, _city.text.trim()),
+      ('Barangay', p.barangay, _barangay.text.trim()),
+      ('Street / Purok', p.street, _street.text.trim()),
+    ];
+    return rows.where((r) => r.$2.trim() != r.$3.trim()).toList();
+  }
+
+  Future<bool> _confirm(List<(String, String, String)> changes) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => _ConfirmChangesDialog(changes: changes),
+    );
+    return ok == true;
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    if (!NetworkStore.instance.ensureOnline(context)) return;
-    setState(() => _loading = true);
     final p = ProfileStore.instance;
     final program = p.isStudent
         ? (_programIsOther ? _other.text.trim() : _program.text.trim())
         : p.program;
+    final changes = _changes(program);
+    if (changes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You have not changed anything yet.')),
+      );
+      return;
+    }
+    if (!await _confirm(changes)) return;
+    if (!mounted) return;
+    if (!NetworkStore.instance.ensureOnline(context)) return;
+    setState(() => _loading = true);
     final result = await AuthService.saveEditableProfile(
       fullName: _name.text.trim(),
       phone: _phone.text.trim(),
@@ -528,6 +565,141 @@ Future<void> _pickDepartment() async {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+/// Green pop-up that asks the user to check the changes before saving.
+class _ConfirmChangesDialog extends StatelessWidget {
+  const _ConfirmChangesDialog({required this.changes});
+
+  final List<(String, String, String)> changes;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      clipBehavior: Clip.antiAlias,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: AppColors.success,
+            padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+            child: const Column(
+              children: [
+                CircleAvatar(
+                  radius: 26,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.verified_user_outlined, size: 28, color: AppColors.success),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Save these changes?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Please check that your new details are correct.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 4),
+              child: Column(
+                children: [
+                  for (final c in changes)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.successLight,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.success.withValues(alpha: 0.35)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            c.$1.toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.6,
+                              color: AppColors.success,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            c.$2.trim().isEmpty ? '(none)' : c.$2,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textMuted,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              const Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.success),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  c.$3.trim().isEmpty ? '(none)' : c.$3,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 6, 18, 18),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Yes, save', style: TextStyle(fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

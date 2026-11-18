@@ -73,21 +73,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Widget _sectionTitle(String text) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.8,
-          color: AppColors.textHint,
-        ),
-      ),
-    );
-  }
-
   Widget _card(NotificationItem n) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -226,8 +211,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         final permits = all.where((n) => n.kind.isPermit).toList();
         final account = all.where((n) => !n.kind.isPermit).toList();
         final shown = _filter == 0 ? all : (_filter == 1 ? permits : account);
-        final fresh = shown.where((n) => !n.read).toList();
-        final earlier = shown.where((n) => n.read).toList();
         final unread = _store.unreadCount;
 
         return Scaffold(
@@ -283,14 +266,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                 ),
                 if (shown.isEmpty) _empty(),
-                if (fresh.isNotEmpty) ...[
-                  _sectionTitle('NEW'),
-                  for (final n in fresh) _card(n),
-                ],
-                if (earlier.isNotEmpty) ...[
-                  _sectionTitle('EARLIER'),
-                  for (final n in earlier) _card(n),
-                ],
+                if (shown.isNotEmpty) const SizedBox(height: 12),
+                // One list, newest first. Unread ones stay highlighted in gold.
+                for (final n in shown) _card(n),
                 if (shown.isNotEmpty)
                   const Padding(
                     padding: EdgeInsets.only(top: 12),

@@ -181,9 +181,8 @@ class _HomeTabState extends State<HomeTab> {
             tone: BadgeTone.red,
             message: 'Fix the items below, then file an appeal.',
             reference: app.referenceNo,
+            footer: DeclinedDetailsCard(app: app, embedded: true),
           ),
-          const SizedBox(height: 12),
-          DeclinedDetailsCard(app: app),
           const SizedBox(height: 16),
           AppealButton(
             referenceNo: app.referenceNo,
