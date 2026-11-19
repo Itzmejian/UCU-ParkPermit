@@ -208,6 +208,7 @@ class DataService {
     final vehicles = <VehicleRecord>[];
     final submitted = <SubmittedApplication>[];
     AppealRecord? appeal;
+    var appealStarted = false;
     StickerReplacementRequest? replacement;
     var localId = 1;
 
@@ -295,6 +296,7 @@ class DataService {
                 for (final d in docRows)
                   if (d['appeal_id'] == a['id']) (d['file_name'] as String?) ?? 'file',
               ];
+              appealStarted = a['status'] != 'submitted';
               appeal = AppealRecord(
                 ticketNo: a['ticket_no'] as String,
                 applicationRef: latestApp['reference_no'] as String,
@@ -357,6 +359,7 @@ class DataService {
       submitted: submitted,
       draft: savedDraft,
       appeal: appeal,
+      appealReviewStarted: appealStarted,
       replacement: replacement,
     );
   }

@@ -191,15 +191,23 @@ class _HomeTabState extends State<HomeTab> {
           ),
         ],
       PermitStatus.appealReview => [
-          StatusSummaryCard(
-            icon: Icons.schedule_rounded,
-            title: 'Appeal Under Review',
-            badgeText: 'UNDER RE-EVALUATION',
-            tone: BadgeTone.gold,
-            message:
-                'The Security Office is checking your corrected documents.',
-            reference: app.referenceNo,
-          ),
+          ApplicationStore.instance.appealReviewStarted
+              ? StatusSummaryCard(
+                  icon: Icons.manage_search_rounded,
+                  title: 'Appeal Under Review',
+                  badgeText: 'UNDER RE-EVALUATION',
+                  tone: BadgeTone.gold,
+                  message: 'An officer is now checking your appeal and corrected documents.',
+                  reference: app.referenceNo,
+                )
+              : StatusSummaryCard(
+                  icon: Icons.hourglass_top_rounded,
+                  title: 'Appeal Submitted',
+                  badgeText: 'WAITING FOR REVIEW',
+                  tone: BadgeTone.gold,
+                  message: 'Your appeal was received. It is waiting for the Security Office to start the review.',
+                  reference: app.referenceNo,
+                ),
           const SizedBox(height: 16),
           PrimaryButton(
             label: 'Track Appeal',

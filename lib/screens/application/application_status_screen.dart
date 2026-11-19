@@ -32,7 +32,9 @@ class ApplicationStatusScreen extends StatelessWidget {
       PermitStatus.pending => const _Info(Icons.hourglass_top_rounded, 'Application submitted', 'PENDING', BadgeTone.gold, 'We received your application. It is waiting in the review queue.'),
       PermitStatus.underReview => const _Info(Icons.manage_search_rounded, 'Under review', 'UNDER REVIEW', BadgeTone.gold, 'An officer is checking your documents. This usually takes 24 to 48 hours.'),
       PermitStatus.declined => const _Info(Icons.cancel_outlined, 'Application declined', 'DECLINED', BadgeTone.red, 'Your application needs a correction. You can file an appeal within 7 days.'),
-      PermitStatus.appealReview => const _Info(Icons.schedule_rounded, 'Appeal under review', 'UNDER RE-EVALUATION', BadgeTone.gold, 'Your appeal and corrected documents are being reviewed.'),
+      PermitStatus.appealReview => ApplicationStore.instance.appealReviewStarted
+          ? const _Info(Icons.manage_search_rounded, 'Appeal under review', 'UNDER RE-EVALUATION', BadgeTone.gold, 'An officer is now checking your appeal and corrected documents.')
+          : const _Info(Icons.hourglass_top_rounded, 'Appeal submitted', 'WAITING FOR REVIEW', BadgeTone.gold, 'Your appeal was received. It is waiting for the Security Office to start the review.'),
       PermitStatus.approved => const _Info(Icons.verified_outlined, 'Permit approved', 'APPROVED', BadgeTone.green, 'Your permit was approved. Your sticker is being prepared.'),
       PermitStatus.stickerReady => const _Info(Icons.inventory_2_outlined, 'Sticker ready', 'READY FOR PICKUP', BadgeTone.gold, 'Claim your permit sticker at the Campus Security Office.'),
       PermitStatus.active => const _Info(Icons.check_circle_outline, 'Permit active', 'ACTIVE', BadgeTone.green, 'Your sticker is claimed and your permit is valid.'),
@@ -53,34 +55,37 @@ class ApplicationStatusScreen extends StatelessWidget {
 
   List<TimelineItem> _timeline(PermitStatus s) {
     if (s == PermitStatus.appealReview) {
-      return const [
-        TimelineItem(
+      final started = ApplicationStore.instance.appealReviewStarted;
+      return [
+        const TimelineItem(
           title: 'Application submitted',
           subtitle: 'Your vehicle details and documents were received.',
           state: TimelineState.done,
         ),
-        TimelineItem(
+        const TimelineItem(
           title: 'Security Office review',
           subtitle: 'Your documents were checked.',
           state: TimelineState.done,
         ),
-        TimelineItem(
+        const TimelineItem(
           title: 'Decision: declined',
           subtitle: 'You were asked to fix some documents.',
           state: TimelineState.done,
         ),
-        TimelineItem(
+        const TimelineItem(
           title: 'Appeal and documents resubmitted',
           subtitle: 'Your replacement documents were uploaded.',
           state: TimelineState.done,
         ),
         TimelineItem(
           title: 'Re-evaluation',
-          subtitle: 'An officer is validating your updated documents.',
-          state: TimelineState.current,
-          tag: 'IN PROGRESS (24-48 HRS)',
+          subtitle: started
+              ? 'An officer is validating your updated documents.'
+              : 'Waiting for an officer to start checking your appeal.',
+          state: started ? TimelineState.current : TimelineState.pending,
+          tag: started ? 'IN PROGRESS (24-48 HRS)' : 'WAITING',
         ),
-        TimelineItem(
+        const TimelineItem(
           title: 'Decision and sticker',
           subtitle: 'You will be notified once a decision is made.',
           state: TimelineState.pending,

@@ -105,6 +105,9 @@ class ApplicationStore extends ChangeNotifier {
   final List<SubmittedApplication> submittedList = [];
   PermitStatus status = PermitStatus.none;
   AppealRecord? lastAppeal;
+
+  /// True once the Security Office clicked "Start review" on the appeal.
+  bool appealReviewStarted = false;
   StickerReplacementRequest? replacement;
   int _appealCount = 0;
 
@@ -177,8 +180,10 @@ class ApplicationStore extends ChangeNotifier {
     required List<SubmittedApplication> submitted,
     ApplicationDraft? draft,
     AppealRecord? appeal,
+    bool appealReviewStarted = false,
     StickerReplacementRequest? replacement,
   }) {
+    this.appealReviewStarted = appealReviewStarted;
     _vehicles
       ..clear()
       ..addAll(vehicles);
